@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 12mm 16mm; size: A4; }
+  :root {
+    --accent: {{accentColor}};
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Georgia", "Times New Roman", serif; color: #1f2937; line-height: 1.45; font-size: 10.5pt; }
+  .header { text-align: center; border-bottom: 2px solid var(--accent); padding-bottom: 16px; margin-bottom: 16px; }
+  .header .row { display: flex; align-items: center; gap: 18px; justify-content: center; }
+  .photo {
+    width: 90px; height: 120px; object-fit: cover; border-radius: 4px;
+    border: 2px solid var(--accent);
+  }
+  .header h1 { font-size: 22pt; font-weight: 700; letter-spacing: -0.01em; }
+  .header .role { color: var(--accent); font-size: 11pt; margin-top: 2px; font-style: italic; }
+  .header .contact { font-size: 9.5pt; color: #4b5563; margin-top: 8px; }
+  .header .contact span { margin: 0 6px; }
+  .header .contact span::before { content: "• "; color: var(--accent); }
+  .header .contact span:first-child::before { content: ""; }
+  h3.section-title {
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-top: 18px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #d1d5db;
+    padding-bottom: 3px;
+  }
+  .summary { font-size: 10.5pt; color: #374151; }
+  .exp-item { margin-bottom: 12px; }
+  .exp-item:last-child { margin-bottom: 0; }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .exp-title { font-weight: 700; font-size: 11pt; }
+  .exp-company { font-size: 10pt; font-style: italic; color: #4b5563; }
+  .exp-dates { font-size: 9pt; color: #6b7280; white-space: nowrap; }
+  .bullets { margin-top: 4px; padding-left: 18px; }
+  .bullets li { margin-bottom: 3px; }
+  .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .skills-list span { font-size: 10pt; color: #374151; }
+  .skills-list span + span::before { content: "· "; margin-left: 4px; color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="row">
+    {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{/if}}
+    <div style="text-align: left;">
+      <h1>{{fullName}}</h1>
+      {{#if roleTitle}}<div class="role">{{roleTitle}}</div>{{/if}}
+      <div class="contact">
+        <span>{{email}}</span><span>{{phone}}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 class="section-title">Summary</h3>
+<p class="summary">{{content.summary}}</p>
+
+<h3 class="section-title">Experience</h3>
+{{#each content.experience}}
+  <div class="exp-item">
+    <div class="exp-head">
+      <div>
+        <span class="exp-title">{{title}}</span>
+        <span class="exp-company">· {{company}}</span>
+      </div>
+      <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+    </div>
+    <ul class="bullets">
+      {{#each bullets}}<li>{{this}}</li>{{/each}}
+    </ul>
+  </div>
+{{/each}}
+
+<h3 class="section-title">Skills</h3>
+<div class="skills-list">
+  {{#each content.skills}}<span>{{this}}</span>{{/each}}
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+// See https://pris.ly/d/prisma-schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  hashedPassword String? // null for OAuth-only users
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jobs Job[]
+  cvs  Cv[]
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  userId      String
+  sourceUrl   String?
+  pastedText  String?
+  rawHtml     String?
+  parsedJson  Json     // {jobTitle, company, location, requiredSkills[], responsibilities[], yearsExperience, keywords[]}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cvs  Cv[]
+
+  @@index([userId])
+}
+
+model Cv {
+  id           String   @id @default(cuid())
+  userId       String
+  jobId        String?
+  fullName     String
+  email        String
+  phone        String
+  photoBase64  String? // base64-encoded JPEG, <200 KB, 3:4 crop
+  contentJson  Json     // {summary, experience: [{company,title,startDate,endDate,bullets[]}], skills[]}
+  templateId   String   @default("modern")
+  accentColor  String   @default("#2563eb")
+  fontId      String   @default("inter")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job?  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}

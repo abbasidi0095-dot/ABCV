@@ -1,0 +1,34 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# next
+.next
+out
+build
+dist
+
+# env
+.env
+.env.local
+.env.*.local
+
+# storage (user-uploaded photos)
+storage/
+
+# prisma
+prisma/*.db
+prisma/*.db-journal
+
+# logs
+*.log
+npm-debug.*
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode
+.idea

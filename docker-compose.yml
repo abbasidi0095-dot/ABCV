@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: abcv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: abcv
+      POSTGRES_PASSWORD: abcv_dev
+      POSTGRES_DB: abcv
+    ports:
+      - "5433:5432"
+    volumes:
+      - abcv_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abcv"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  abcv_pg:

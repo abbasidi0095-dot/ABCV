@@ -1,0 +1,8 @@
+{
+  "id": "classic",
+  "name": "Classic",
+  "description": "Traditional single-column resume: centered header with photo, structured experience sections. Conservative palette ideal for formal sectors.",
+  "accentDefault": "#4b5563",
+  "fonts": ["georgia", "times", "inter"],
+  "preview": "preview.png"
+}

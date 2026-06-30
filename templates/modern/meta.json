@@ -1,0 +1,8 @@
+{
+  "id": "modern",
+  "name": "Modern",
+  "description": "Two-column layout with an accent sidebar containing contact info, skills, and photo. Clean serif body for content.",
+  "accentDefault": "#2563eb",
+  "fonts": ["inter", "georgia", "roboto"],
+  "preview": "preview.png"
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 18mm 22mm; size: A4; }
+  :root {
+    --accent: {{accentColor}};
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", -apple-system, sans-serif; color: #1f2937; line-height: 1.55; font-size: 10pt; }
+
+  .header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid #e5e7eb; margin-bottom: 22px; }
+  .header-left { display: flex; gap: 18px; align-items: center; }
+  .photo { width: 72px; height: 96px; object-fit: cover; border-radius: 50%; }
+  .header h1 { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .header .role { color: var(--accent); font-size: 11pt; margin-top: 2px; font-weight: 500; }
+  .contact { text-align: right; font-size: 9pt; color: #6b7280; line-height: 1.5; }
+
+  .summary { font-size: 10.5pt; color: #374151; margin-bottom: 22px; max-width: 70ch; }
+
+  .section + .section { margin-top: 22px; }
+  .section-title {
+    font-size: 9pt; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin-bottom: 12px; font-weight: 600;
+  }
+  .exp-item { margin-bottom: 16px; }
+  .exp-item:last-child { margin-bottom: 0; }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .exp-title { font-weight: 600; font-size: 11pt; }
+  .exp-company { color: #6b7280; font-size: 10pt; font-weight: 400; }
+  .exp-dates { color: #9ca3af; font-size: 9pt; white-space: nowrap; }
+  .bullets { margin-top: 6px; padding-left: 14px; }
+  .bullets li { margin-bottom: 4px; color: #374151; }
+
+  .skills-wrap { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 9.5pt; color: #374151; }
+  .skills-wrap span::before { content: "– "; color: var(--accent); margin-right: 2px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{/if}}
+    <div>
+      <h1>{{fullName}}</h1>
+      {{#if roleTitle}}<div class="role">{{roleTitle}}</div>{{/if}}
+    </div>
+  </div>
+  <div class="contact">
+    {{email}}<br />{{phone}}
+  </div>
+</div>
+
+{{#if content.summary}}
+<section>
+  <p class="summary">{{content.summary}}</p>
+</section>
+{{/if}}
+
+<section class="section">
+  <h3 class="section-title">Experience</h3>
+  {{#each content.experience}}
+    <div class="exp-item">
+      <div class="exp-head">
+        <div>
+          <span class="exp-title">{{title}}</span>
+          <span class="exp-company">· {{company}}</span>
+        </div>
+        <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+      </div>
+      <ul class="bullets">
+        {{#each bullets}}<li>{{this}}</li>{{/each}}
+      </ul>
+    </div>
+  {{/each}}
+</section>
+
+{{#if content.skills.length}}
+<section class="section">
+  <h3 class="section-title">Skills</h3>
+  <div class="skills-wrap">
+    {{#each content.skills}}<span>{{this}}</span>{{/each}}
+  </div>
+</section>
+{{/if}}
+</body>
+</html>
