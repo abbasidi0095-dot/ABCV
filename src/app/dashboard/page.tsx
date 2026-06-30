@@ -47,7 +47,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/new">+ New CV</Link>
+          <Link href="/new" prefetch={false}>+ New CV</Link>
         </Button>
       </div>
 
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           <Card className="p-10 text-center">
             <p className="text-sm text-muted-foreground">No CVs yet.</p>
             <Button asChild className="mt-4">
-              <Link href="/new">Create your first CV</Link>
+              <Link href="/new" prefetch={false}>Create your first CV</Link>
             </Button>
           </Card>
         ) : (
@@ -75,7 +75,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/new?cv=${c.id}`}>Edit</Link>
+                      <Link href={`/new?cv=${c.id}`} prefetch={false}>Edit</Link>
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => remove(c.id)}>
                       Delete
