@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; size: A4; }
+  :root { --accent: {{accentColor}}; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: 10pt; }
+  .page { min-height: 297mm; width: 210mm; padding: 14mm 18mm 10mm; }
+  .header { margin-bottom: 20px; border-bottom: 4px solid var(--accent); padding-bottom: 14px; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  .name-title h1 { font-size: 34pt; font-weight: 900; letter-spacing: -0.04em; line-height: 1; color: #111827; }
+  .name-title .role-line { font-size: 13pt; font-weight: 500; color: var(--accent); margin-top: 4px; }
+  .contact-block { text-align: right; font-size: 9pt; color: #6b7280; line-height: 1.6; }
+  .photo { width: 80px; height: 107px; object-fit: cover; border-radius: 4px; }
+  .photo-placeholder { width: 80px; height: 107px; border-radius: 4px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #d1d5db; font-weight: 700; }
+  .header-flex { display: flex; align-items: center; gap: 16px; }
+  .section { margin-top: 18px; }
+  .section-title { font-size: 14pt; font-weight: 800; color: #111827; margin-bottom: 8px; display: inline-block; }
+  .section-title::after { content: ""; display: block; width: 40px; height: 4px; background: var(--accent); margin-top: 2px; border-radius: 2px; }
+  .summary { font-size: 10.5pt; color: #4b5563; max-width: 80%; }
+  .exp-item { margin-bottom: 14px; }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .exp-title { font-weight: 700; font-size: 11pt; color: #111827; }
+  .exp-company { color: var(--accent); font-size: 10pt; font-weight: 500; }
+  .exp-dates { color: #9ca3af; font-size: 8.5pt; white-space: nowrap; font-weight: 500; }
+  .bullets { margin-top: 4px; padding-left: 18px; list-style: none; }
+  .bullets li { margin-bottom: 3px; color: #374151; position: relative; }
+  .bullets li::before { content: "▸"; color: var(--accent); position: absolute; left: -16px; font-weight: 700; }
+  .skills-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .skills-grid span { background: #f3f4f6; color: #374151; padding: 3px 12px; border-radius: 20px; font-size: 9pt; border: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-flex">
+        {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{/if}}
+        <div class="name-title">
+          <h1>{{fullName}}</h1>
+          {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
+        </div>
+      </div>
+      <div class="contact-block">
+        {{email}}<br />{{phone}}
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h3 class="section-title">Summary</h3>
+    <p class="summary">{{content.summary}}</p>
+  </section>
+
+  <section class="section">
+    <h3 class="section-title">Experience</h3>
+    {{#each content.experience}}
+    <div class="exp-item">
+      <div class="exp-head">
+        <div>
+          <span class="exp-title">{{title}}</span>
+          <span class="exp-company">· {{company}}</span>
+        </div>
+        <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+      </div>
+      <ul class="bullets">
+        {{#each bullets}}<li>{{this}}</li>{{/each}}
+      </ul>
+    </div>
+    {{/each}}
+  </section>
+
+  <section class="section">
+    <h3 class="section-title">Skills</h3>
+    <div class="skills-grid">
+      {{#each content.skills}}<span>{{this}}</span>{{/each}}
+    </div>
+  </section>
+</div>
+</body>
+</html>

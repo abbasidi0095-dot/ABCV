@@ -63,6 +63,7 @@ const NewPageInner = () => {
   const [phone, setPhone] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [language, setLanguage] = useState("en");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3/4: edit and style
@@ -76,6 +77,10 @@ const NewPageInner = () => {
   const [fontId, setFontId] = useState("inter");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
+
+  // Cover letter
+  const [coverLetterBody, setCoverLetterBody] = useState<string | null>(null);
+  const [coverLetterBusy, setCoverLetterBusy] = useState(false);
 
   // Edit existing CV: jump straight to edit step.
   useEffect(() => {
@@ -161,6 +166,7 @@ const NewPageInner = () => {
       fd.set("fullName", fullName);
       fd.set("email", emailDetail);
       fd.set("phone", phone);
+      fd.set("language", language);
       if (photo) fd.set("photo", photo);
 
       const r = await fetch("/api/cvs", { method: "POST", body: fd });
@@ -268,6 +274,43 @@ const NewPageInner = () => {
     setContent((c) => (c ? { ...c, skills: arr } : c));
   };
 
+  const generateCoverLetter = async () => {
+    if (!cvId) return;
+    setCoverLetterBusy(true);
+    try {
+      const r = await fetch(`/api/cvs/${cvId}/cover-letter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language }),
+      });
+      if (!r.ok) throw new Error("Generation failed");
+      const d = await r.json();
+      setCoverLetterBody(d.body);
+      toast.success("Cover letter generated");
+    } catch (e) {
+      toast.error("Cover letter failed", { description: (e as Error).message });
+    } finally {
+      setCoverLetterBusy(false);
+    }
+  };
+
+  const downloadCoverLetter = async () => {
+    if (!cvId || !coverLetterBody) return;
+    try {
+      const r = await fetch(`/api/cvs/${cvId}/cover-letter?download=true`);
+      if (!r.ok) throw new Error("Download failed");
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fullName.replace(/\s+/g, "_")}_Cover_Letter.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Download failed", { description: (e as Error).message });
+    }
+  };
+
   const activeTemplate = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
 
   return (
@@ -365,6 +408,20 @@ const NewPageInner = () => {
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 555 1234" />
+              </div>
+              <div>
+                <Label htmlFor="cv-language">{t("new.details.language")}</Label>
+                <select
+                  id="cv-language"
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                >
+                  <option value="en">English</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="de">Deutsch</option>
+                </select>
               </div>
               <div>
                 <Label htmlFor="photo">Photo <span className="text-muted-foreground">(any image — we&apos;ll crop &amp; compress)</span></Label>
@@ -535,6 +592,30 @@ const NewPageInner = () => {
               </Button>
               <Button onClick={downloadPdf} disabled={rendering}>Download PDF</Button>
             </div>
+
+            <hr className="my-5" />
+
+            <h3 className="text-sm font-semibold">{t("new.cover.title")}</h3>
+            {!coverLetterBody ? (
+              <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" className="mt-2 w-full">
+                {coverLetterBusy ? t("new.cover.generating") : t("new.cover.generate")}
+              </Button>
+            ) : (
+              <div className="mt-2 space-y-3">
+                <Textarea
+                  rows={8}
+                  value={coverLetterBody}
+                  onChange={(e) => setCoverLetterBody(e.target.value)}
+                  className="text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" size="sm">
+                    {coverLetterBusy ? t("new.cover.generating") : t("new.cover.regenerate")}
+                  </Button>
+                  <Button onClick={downloadCoverLetter} size="sm">{t("new.cover.download")}</Button>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card className="p-3">

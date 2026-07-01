@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   const fullName = (form.get("fullName") as string | null)?.trim();
   const email = (form.get("email") as string | null)?.trim();
   const phone = (form.get("phone") as string | null)?.trim();
+  const language = (form.get("language") as string | null) ?? "en";
   const photoFile = form.get("photo") as File | null;
 
   if (!fullName || !email || !phone) {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   let content: CVContent;
   if (isLlmConfigured()) {
     try {
-      const userPrompt = `Target role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role.`;
+      const userPrompt = `Language: ${language}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role. Write ALL content (summary, bullets, skills) in the specified language.`;
       content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 6000 });
     } catch (e) {
       console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       jobId: jobId ?? null,
       fullName, email, phone, photoBase64,
       contentJson: content,
+      language,
     },
   });
 
@@ -100,7 +102,7 @@ function mockCVContent(fullName: string): CVContent {
     summary: `Detail-oriented engineer with a track record of shipping reliable products end to end. ${fullName} thrives in collaborative teams and ships clean, well-tested code.`,
     experience: [
       {
-        company: "Northwind Solutions",
+        company: "Stripe",
         title: "Senior Software Engineer",
         startDate: "Apr 2022", endDate: "Present",
         bullets: [
@@ -110,7 +112,7 @@ function mockCVContent(fullName: string): CVContent {
         ],
       },
       {
-        company: "Acme Logistics",
+        company: "Shopify",
         title: "Software Engineer",
         startDate: "Jun 2019", endDate: "Mar 2022",
         bullets: [
@@ -120,7 +122,7 @@ function mockCVContent(fullName: string): CVContent {
         ],
       },
       {
-        company: "Brightpath Labs",
+        company: "Figma",
         title: "Junior Developer",
         startDate: "Aug 2017", endDate: "May 2019",
         bullets: [

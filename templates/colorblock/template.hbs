@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; size: A4; }
+  :root { --accent: {{accentColor}}; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: 10pt; }
+  .page { display: flex; min-height: 297mm; width: 210mm; }
+  .sidebar {
+    width: 38%; background: var(--accent); color: #fff; padding: 16mm 10mm 12mm;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .main { flex: 1; padding: 16mm 14mm 12mm; background: #fff; }
+  .photo { width: 110px; height: 147px; object-fit: cover; border-radius: 2px; display: block; margin-bottom: 10px; border: 3px solid rgba(255,255,255,0.3); }
+  .photo-placeholder { width: 110px; height: 147px; border-radius: 2px; margin-bottom: 10px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 36px; color: rgba(255,255,255,0.7); font-weight: 700; }
+  .sidebar h2 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; opacity: 0.8; margin-bottom: 6px; }
+  .sidebar-divider { height: 1px; background: rgba(255,255,255,0.25); margin: 4px 0 8px; }
+  .contact-info { font-size: 9pt; line-height: 1.7; word-break: break-word; }
+  .skills-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+  .skills-wrap span { background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 3px; font-size: 8.5pt; }
+  .main h1 { font-size: 28pt; font-weight: 800; letter-spacing: -0.03em; color: #111827; line-height: 1.1; }
+  .main .role-line { font-size: 12pt; font-weight: 500; color: var(--accent); margin-top: 2px; }
+  .main .section { margin-top: 20px; }
+  .main .section-title { font-size: 11pt; font-weight: 700; color: #111827; margin-bottom: 8px; display: inline-block; border-bottom: 3px solid var(--accent); padding-bottom: 2px; }
+  .summary { font-size: 10pt; color: #4b5563; }
+  .exp-item { margin-bottom: 14px; border-left: 3px solid var(--accent); padding-left: 10px; }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .exp-title { font-weight: 700; font-size: 10.5pt; }
+  .exp-company { color: #6b7280; font-size: 9.5pt; }
+  .exp-dates { color: #9ca3af; font-size: 8.5pt; white-space: nowrap; }
+  .bullets { margin-top: 4px; padding-left: 14px; }
+  .bullets li { margin-bottom: 2px; color: #374151; }
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="sidebar">
+    {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{else}}<div class="photo-placeholder">{{initials}}</div>{{/if}}
+
+    <div>
+      <h2>Contact</h2>
+      <div class="sidebar-divider"></div>
+      <div class="contact-info">
+        {{email}}<br />{{phone}}
+      </div>
+    </div>
+
+    <div>
+      <h2>Skills</h2>
+      <div class="sidebar-divider"></div>
+      <div class="skills-wrap">
+        {{#each content.skills}}<span>{{this}}</span>{{/each}}
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1>{{fullName}}</h1>
+    {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
+
+    <section class="section">
+      <h3 class="section-title">Summary</h3>
+      <p class="summary">{{content.summary}}</p>
+    </section>
+
+    <section class="section">
+      <h3 class="section-title">Experience</h3>
+      {{#each content.experience}}
+      <div class="exp-item">
+        <div class="exp-head">
+          <div>
+            <span class="exp-title">{{title}}</span>
+            <span class="exp-company">· {{company}}</span>
+          </div>
+          <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+        </div>
+        <ul class="bullets">
+          {{#each bullets}}<li>{{this}}</li>{{/each}}
+        </ul>
+      </div>
+      {{/each}}
+    </section>
+  </main>
+</div>
+</body>
+</html>

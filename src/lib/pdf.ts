@@ -88,5 +88,77 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
   }
 }
 
+/** Cover letter render */
+export interface CoverLetterArgs {
+  fullName: string;
+  email: string;
+  phone: string;
+  roleTitle?: string | null;
+  body: string;
+}
+
+export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffer> {
+  const initials = args.fullName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 22mm 25mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, "Times New Roman", serif; color: #1f2937; font-size: 11pt; line-height: 1.6; }
+  .header { margin-bottom: 28px; }
+  .header h1 { font-size: 18pt; font-weight: 700; color: #111827; }
+  .contact { font-size: 10pt; color: #6b7280; margin-top: 2px; }
+  .date { margin-bottom: 20px; color: #6b7280; font-size: 10pt; }
+  .salutation { margin-bottom: 14px; }
+  .body p { margin-bottom: 12px; }
+  .closing { margin-top: 22px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>${args.fullName}</h1>
+    <div class="contact">${args.email} &middot; ${args.phone}</div>
+  </div>
+  <div class="date">${dateStr}</div>
+  <div class="salutation">Dear Hiring Manager,</div>
+  <div class="body">
+    ${args.body.split("\n\n").map((p) => `<p>${p.trim()}</p>`).join("\n    ")}
+  </div>
+  <div class="closing">
+    <p>Sincerely,</p>
+    <p><strong>${args.fullName}</strong></p>
+  </div>
+</body>
+</html>`;
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
+}
+
 // Re-export for routes
 export { CVContentSchema };

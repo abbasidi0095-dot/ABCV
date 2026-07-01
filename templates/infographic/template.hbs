@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; size: A4; }
+  :root { --accent: {{accentColor}}; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.4; font-size: 9.5pt; }
+  .page { min-height: 297mm; width: 210mm; padding: 12mm 16mm 10mm; }
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .photo { width: 70px; height: 93px; object-fit: cover; border-radius: 50%; border: 3px solid var(--accent); }
+  .photo-placeholder { width: 70px; height: 93px; border-radius: 50%; border: 3px solid var(--accent); background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent); font-weight: 700; }
+  .name-area h1 { font-size: 26pt; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .name-area .role-line { font-size: 11pt; color: var(--accent); font-weight: 600; margin-top: 2px; }
+  .contact-row { display: flex; gap: 16px; font-size: 9pt; color: #6b7280; margin-top: 4px; }
+  .contact-row span { display: flex; align-items: center; gap: 4px; }
+  .grid { display: flex; gap: 20px; margin-top: 14px; }
+  .left-col { flex: 1.6; }
+  .right-col { flex: 1; }
+
+  .section-title {
+    font-size: 8pt; text-transform: uppercase; letter-spacing: 0.12em;
+    font-weight: 700; color: var(--accent); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-title::before { content: ""; display: inline-block; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; }
+
+  .summary { font-size: 9.5pt; color: #4b5563; margin-bottom: 14px; }
+
+  .timeline { position: relative; padding-left: 18px; }
+  .timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: #e5e7eb; }
+  .exp-item { position: relative; margin-bottom: 12px; }
+  .exp-item::before { content: ""; position: absolute; left: -13px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .exp-title { font-weight: 700; font-size: 10pt; }
+  .exp-company { color: var(--accent); font-size: 9pt; font-weight: 500; }
+  .exp-dates { color: #9ca3af; font-size: 8pt; white-space: nowrap; }
+  .bullets { margin-top: 3px; padding-left: 12px; }
+  .bullets li { margin-bottom: 2px; color: #374151; }
+
+  .skill-bar-group { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .skill-bar-item { display: flex; align-items: center; gap: 6px; }
+  .skill-bar-label { font-size: 8.5pt; color: #374151; width: 80px; flex-shrink: 0; }
+  .skill-bar-track { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .skill-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .skill-bar-item:nth-child(1) .skill-bar-fill { width: 95%; }
+  .skill-bar-item:nth-child(2) .skill-bar-fill { width: 90%; }
+  .skill-bar-item:nth-child(3) .skill-bar-fill { width: 85%; }
+  .skill-bar-item:nth-child(4) .skill-bar-fill { width: 80%; }
+  .skill-bar-item:nth-child(5) .skill-bar-fill { width: 90%; }
+  .skill-bar-item:nth-child(6) .skill-bar-fill { width: 75%; }
+  .skill-bar-item:nth-child(7) .skill-bar-fill { width: 85%; }
+  .skill-bar-item:nth-child(8) .skill-bar-fill { width: 70%; }
+  .skill-bar-item:nth-child(9) .skill-bar-fill { width: 80%; }
+  .skill-bar-item:nth-child(10) .skill-bar-fill { width: 75%; }
+  .skill-bar-item:nth-child(11) .skill-bar-fill { width: 65%; }
+  .skill-bar-item:nth-child(12) .skill-bar-fill { width: 70%; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{else}}<div class="photo-placeholder">{{initials}}</div>{{/if}}
+    <div class="name-area">
+      <h1>{{fullName}}</h1>
+      {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
+      <div class="contact-row">
+        <span>{{email}}</span>
+        <span>{{phone}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="left-col">
+      <h3 class="section-title">Summary</h3>
+      <p class="summary">{{content.summary}}</p>
+
+      <h3 class="section-title">Experience</h3>
+      <div class="timeline">
+        {{#each content.experience}}
+        <div class="exp-item">
+          <div class="exp-head">
+            <div>
+              <span class="exp-title">{{title}}</span>
+              <span class="exp-company">· {{company}}</span>
+            </div>
+            <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+          </div>
+          <ul class="bullets">
+            {{#each bullets}}<li>{{this}}</li>{{/each}}
+          </ul>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="right-col">
+      <h3 class="section-title">Skills</h3>
+      <div class="skill-bar-group">
+        {{#each content.skills}}
+        <div class="skill-bar-item">
+          <span class="skill-bar-label">{{this}}</span>
+          <div class="skill-bar-track">
+            <div class="skill-bar-fill"></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

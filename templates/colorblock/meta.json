@@ -1,0 +1,8 @@
+{
+  "id": "colorblock",
+  "name": "Color Block",
+  "description": "Split layout with a bold accent sidebar and clean white content area.",
+  "accentDefault": "#0891b2",
+  "fonts": ["Inter", "System UI", "SF Pro"],
+  "preview": "colorblock.png"
+}

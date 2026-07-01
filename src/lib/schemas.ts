@@ -51,7 +51,14 @@ export const CreateCvInputSchema = z.object({
   fullName: z.string().min(2).max(80),
   email: z.string().email(),
   phone: z.string().min(5).max(30),
+  language: z.string().default("en"),
 });
+
+/** Generated cover letter content */
+export const CoverLetterContentSchema = z.object({
+  body: z.string().min(50).max(2000),
+});
+export type CoverLetterContent = z.infer<typeof CoverLetterContentSchema>;
 
 /** Render request body */
 export const RenderInputSchema = z.object({

@@ -37,19 +37,21 @@ model Job {
 }
 
 model Cv {
-  id           String   @id @default(cuid())
-  userId       String
-  jobId        String?
-  fullName     String
-  email        String
-  phone        String
-  photoBase64  String? // base64-encoded JPEG, <200 KB, 3:4 crop
-  contentJson  Json     // {summary, experience: [{company,title,startDate,endDate,bullets[]}], skills[]}
-  templateId   String   @default("modern")
-  accentColor  String   @default("#2563eb")
-  fontId      String   @default("inter")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String
+  jobId            String?
+  fullName         String
+  email            String
+  phone            String
+  photoBase64      String? // base64-encoded JPEG, <200 KB, 3:4 crop
+  contentJson      Json     // {summary, experience: [{company,title,startDate,endDate,bullets[]}], skills[]}
+  templateId       String   @default("modern")
+  accentColor      String   @default("#2563eb")
+  fontId           String   @default("inter")
+  language         String   @default("en")
+  coverLetterText  String?  // generated cover letter body text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   job  Job?  @relation(fields: [jobId], references: [id], onDelete: SetNull)

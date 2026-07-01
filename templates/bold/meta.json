@@ -1,0 +1,8 @@
+{
+  "id": "bold",
+  "name": "Bold",
+  "description": "Extra-large headings, accent underline, and generous whitespace for a confident modern look.",
+  "accentDefault": "#dc2626",
+  "fonts": ["Inter", "SF Pro", "System UI"],
+  "preview": "bold.png"
+}
