@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
 import { useI18n } from "@/lib/i18n";
 
 const features = [
@@ -62,8 +62,15 @@ const features = [
 ];
 
 export default function Home() {
-  const { status } = useSession();
+  const [authed, setAuthed] = useState(false);
   const { t } = useI18n();
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => setAuthed(!!d.user))
+      .catch(() => {});
+  }, []);
   return (
     <>
       <section className="relative overflow-hidden px-6 pt-20 pb-28 sm:pt-28 sm:pb-36">
@@ -86,7 +93,7 @@ export default function Home() {
             {t("home.hero.subtitle")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {status === "authenticated" ? (
+            {authed ? (
               <Button asChild size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
                 <Link href="/dashboard">{t("home.hero.dashboard")}</Link>
               </Button>
@@ -187,7 +194,7 @@ export default function Home() {
             {t("home.cta.subtitle")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {status === "authenticated" ? (
+            {authed ? (
               <Button asChild size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
                 <Link href="/dashboard">{t("home.cta.dashboard")}</Link>
               </Button>
