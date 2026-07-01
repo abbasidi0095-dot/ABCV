@@ -17,13 +17,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
-RUN mkdir -p /app/puppeteer-vendor && \
-    for pkg in puppeteer puppeteer-core @puppeteer/browsers; do \
-      src=$(find /app/node_modules/.pnpm -maxdepth 1 -name "${pkg}@*" -type d | head -1); \
-      if [ -n "$src" ]; then \
-        cp -rL "$src/node_modules/$pkg" "/app/puppeteer-vendor/$pkg"; \
-      fi; \
-    done
 
 FROM base AS runner
 WORKDIR /app
@@ -49,9 +42,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/templates ./templates
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/puppeteer-vendor /app/node_modules/
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma-client-bin ./node_modules/.prisma
+RUN npm install puppeteer@23.11.1 --no-save --no-package-lock --no-fund --no-audit
 
 USER nextjs
 
