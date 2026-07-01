@@ -2,15 +2,14 @@ import OpenAI from "openai";
 import { z, ZodTypeAny } from "zod";
 
 /**
- * LLM client for OpenCode Go models.
- * Currently configured to Kimi K2.6 via the OpenCode Go OpenAI-compatible
- * endpoint (/v1/chat/completions). Switch model via OPENCODE_GO_MODEL env var.
+ * LLM client for Google Gemini models via OpenAI-compatible endpoint.
  * Uses JSON-mode + schema-in-prompt + Zod validation, retrying once on failure.
+ * Configure via GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL env vars.
  */
 
-const apiKey = process.env.OPENCODE_GO_API_KEY;
-const baseURL = process.env.OPENCODE_GO_BASE_URL ?? "https://opencode.ai/zen/go/v1";
-const model = process.env.OPENCODE_GO_MODEL ?? "deepseek-v4-flash";
+const apiKey = process.env.GEMINI_API_KEY;
+const baseURL = process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai/";
+const model = process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
 
 export const llm = apiKey
   ? new OpenAI({ apiKey, baseURL })
@@ -35,7 +34,7 @@ export async function llmJson<T extends ZodTypeAny>(
   userPrompt: string,
   opts?: { temperature?: number; maxTokens?: number },
 ): Promise<z.infer<T>> {
-  if (!llm) throw new LlmError("OPENCODE_GO_API_KEY not set — cannot call LLM.");
+  if (!llm) throw new LlmError("GEMINI_API_KEY not set — cannot call LLM.");
 
   const schemaJson = schemaDescriptionJson(schema);
   const fullSystem = `${systemPrompt}\n\nReturn ONLY a single valid JSON object (no markdown, no prose). The object MUST conform to this TypeScript-like shape:\n\`\`\`\n${schemaJson}\n\`\`\``;
