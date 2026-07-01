@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Link from "next/link";
-import { signUpUser, confirmUser, signInUser, getCognitoToken } from "@/lib/cognito";
+import { signUpUser, confirmUser, signInUser, signOutUser, getCognitoToken } from "@/lib/cognito";
 
 type AuthStep = "choice" | "signin" | "signup" | "confirm";
 
@@ -34,6 +34,7 @@ export default function LoginPage() {
     if (!email || !password) return;
     setBusy(true);
     try {
+      await signOutUser().catch(() => {}); // clear stale session first
       await signInUser(email, password);
       await createServerSession();
       toast.success("Signed in");
@@ -81,6 +82,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await confirmUser(email, otp);
+      await signOutUser().catch(() => {}); // clear any auto-session
       toast.success("Email verified! You can now sign in.");
       setStep("signin");
       setOtp("");
