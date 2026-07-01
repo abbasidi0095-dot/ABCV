@@ -37,6 +37,9 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
+# Install Prisma CLI for migrations (runs at deploy time)
+RUN npm install -g prisma@6.19.3
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
