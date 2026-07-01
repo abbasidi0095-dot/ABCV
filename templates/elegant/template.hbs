@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; size: A4; }
+  :root { --accent: {{accentColor}}; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Georgia", "Times New Roman", serif; color: #2d2a24; line-height: 1.6; font-size: 10.5pt; }
+  .page { min-height: 297mm; width: 210mm; padding: 22mm 24mm; }
+  .top-rule { width: 60px; height: 3px; background: var(--accent); margin-bottom: 12px; }
+  h1 { font-size: 28pt; font-weight: 700; letter-spacing: -0.01em; color: #1a1a1a; }
+  .role-line { color: var(--accent); font-size: 12pt; font-style: italic; margin-top: 2px; font-weight: 400; }
+  .contact-line { font-size: 9pt; color: #6b6358; margin-top: 8px; border-top: 1px solid #e5e0d8; padding-top: 10px; }
+  .contact-line span { margin: 0 6px; }
+  section { margin-top: 22px; }
+  h3 {
+    font-size: 10pt; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); font-weight: 600; margin-bottom: 10px;
+  }
+  .photo-wrap { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 16px; }
+  .photo { width: 90px; height: 120px; object-fit: cover; border-radius: 4px; }
+  .photo-placeholder { width: 90px; height: 120px; background: #f0ede8; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #b0a89c; border-radius: 4px; }
+  .summary { font-size: 10pt; color: #4a463e; font-style: italic; }
+  .exp-item { margin-bottom: 16px; padding-left: 12px; border-left: 2px solid var(--accent); }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .exp-title { font-weight: 700; font-size: 11pt; color: #1a1a1a; }
+  .exp-company { color: #6b6358; font-size: 10pt; font-style: italic; }
+  .exp-dates { color: #9c9488; font-size: 9pt; white-space: nowrap; }
+  .bullets { margin-top: 6px; padding-left: 18px; }
+  .bullets li { margin-bottom: 3px; }
+  .skills-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skills-wrap span { background: #f5f2ed; padding: 3px 12px; border-radius: 2px; font-size: 9pt; color: #4a463e; }
+</style>
+</head>
+<body>
+<div class="page">
+  {{#if photoB64}}
+    <div class="photo-wrap">
+      <img class="photo" src="{{photoB64}}" alt="" />
+      <div>
+  {{else}}
+    <div class="photo-wrap">
+      <div class="photo-placeholder">{{initials}}</div>
+      <div>
+  {{/if}}
+        <div class="top-rule"></div>
+        <h1>{{fullName}}</h1>
+        {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
+      </div>
+    </div>
+
+  <div class="contact-line">
+    <span>{{email}}</span><span>{{phone}}</span>
+  </div>
+
+  <section>
+    <h3>Summary</h3>
+    <p class="summary">{{content.summary}}</p>
+  </section>
+
+  <section>
+    <h3>Experience</h3>
+    {{#each content.experience}}
+      <div class="exp-item">
+        <div class="exp-head">
+          <div>
+            <span class="exp-title">{{title}}</span>
+            <span class="exp-company">· {{company}}</span>
+          </div>
+          <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+        </div>
+        <ul class="bullets">
+          {{#each bullets}}<li>{{this}}</li>{{/each}}
+        </ul>
+      </div>
+    {{/each}}
+  </section>
+
+  <section>
+    <h3>Skills</h3>
+    <div class="skills-wrap">
+      {{#each content.skills}}<span>{{this}}</span>{{/each}}
+    </div>
+  </section>
+</div>
+</body>
+</html>

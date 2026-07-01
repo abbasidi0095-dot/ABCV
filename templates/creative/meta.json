@@ -1,0 +1,8 @@
+{
+  "id": "creative",
+  "name": "Creative",
+  "description": "Bold colored header with modern typography and visual flair.",
+  "accentDefault": "#8b5cf6",
+  "fonts": ["Inter", "System UI", "SF Pro"],
+  "preview": "creative.png"
+}

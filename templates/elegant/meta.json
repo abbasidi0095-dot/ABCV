@@ -1,0 +1,8 @@
+{
+  "id": "elegant",
+  "name": "Elegant",
+  "description": "Refined serif layout with gold accents and classic typography.",
+  "accentDefault": "#b8860b",
+  "fonts": ["Georgia", "Merriweather", "Lora"],
+  "preview": "elegant.png"
+}

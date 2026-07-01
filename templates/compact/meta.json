@@ -1,0 +1,8 @@
+{
+  "id": "compact",
+  "name": "Compact",
+  "description": "Dense, space-efficient layout for experienced professionals.",
+  "accentDefault": "#2563eb",
+  "fonts": ["Inter", "System UI", "SF Pro"],
+  "preview": "compact.png"
+}

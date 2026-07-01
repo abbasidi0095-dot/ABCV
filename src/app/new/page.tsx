@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 
 type Step = "job" | "details" | "edit" | "style";
@@ -42,6 +43,7 @@ const NewPage: NextPage = () => (
 );
 
 const NewPageInner = () => {
+  const { t } = useI18n();
   const params = useSearchParams();
   const editId = params.get("cv");
 
@@ -246,6 +248,20 @@ const NewPageInner = () => {
       return { ...c, experience: exp };
     });
   };
+  const addExperience = () => {
+    setContent((c) => {
+      if (!c) return c;
+      const newEntry: ExperienceEntry = { company: "", title: "", startDate: "", endDate: "", bullets: [""] };
+      return { ...c, experience: [...c.experience, newEntry] };
+    });
+  };
+  const removeExperience = (i: number) => {
+    setContent((c) => {
+      if (!c) return c;
+      const exp = c.experience.filter((_, idx) => idx !== i);
+      return { ...c, experience: exp };
+    });
+  };
   const skillsValue = content?.skills ?? [];
   const setSkills = (csv: string) => {
     const arr = csv.split(",").map((s) => s.trim()).filter(Boolean);
@@ -385,7 +401,7 @@ const NewPageInner = () => {
       {step === "edit" && content && (
         <Card className="mt-6 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Review &amp; edit</h2>
+            <h2 className="text-lg font-semibold">{t("new.edit.title")}</h2>
             {issues.length > 0 && (
               <span className="text-xs text-amber-600">{issues.length} validation warnings — saved anyway</span>
             )}
@@ -393,35 +409,49 @@ const NewPageInner = () => {
 
           <div className="mt-5 space-y-5">
             <div>
-              <Label>Summary</Label>
+              <Label>{t("new.edit.summary")}</Label>
               <Textarea
                 rows={3}
                 value={content.summary}
                 onChange={(e) => setContent((c) => (c ? { ...c, summary: e.target.value } : c))}
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Experience</Label>
+              <Button type="button" size="sm" variant="outline" onClick={addExperience}>
+                {t("new.edit.add")}
+              </Button>
+            </div>
+
             {content.experience.map((e, i) => (
               <div key={i} className="rounded-lg border p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">#{i + 1}</span>
+                  <Button type="button" size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => removeExperience(i)}>
+                    {t("new.edit.remove")}
+                  </Button>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <Label>Title</Label>
+                    <Label>{t("new.edit.title.label")}</Label>
                     <Input value={e.title} onChange={(ev) => patchExperience(i, { title: ev.target.value })} />
                   </div>
                   <div>
-                    <Label>Company</Label>
+                    <Label>{t("new.edit.company")}</Label>
                     <Input value={e.company} onChange={(ev) => patchExperience(i, { company: ev.target.value })} />
                   </div>
                   <div>
-                    <Label>Start</Label>
+                    <Label>{t("new.edit.start")}</Label>
                     <Input value={e.startDate} onChange={(ev) => patchExperience(i, { startDate: ev.target.value })} placeholder="Mar 2021" />
                   </div>
                   <div>
-                    <Label>End</Label>
+                    <Label>{t("new.edit.end")}</Label>
                     <Input value={e.endDate} onChange={(ev) => patchExperience(i, { endDate: ev.target.value })} placeholder="Present" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Label>Bullets (one per line)</Label>
+                  <Label>{t("new.edit.bullets")}</Label>
                   <Textarea
                     rows={Math.max(3, e.bullets.length)}
                     value={e.bullets.join("\n")}
@@ -439,7 +469,7 @@ const NewPageInner = () => {
               </div>
             ))}
             <div>
-              <Label>Skills (comma-separated)</Label>
+              <Label>{t("new.edit.skills")}</Label>
               <Input
                 value={skillsValue.join(", ")}
                 onChange={(e) => setSkills(e.target.value)}
@@ -449,7 +479,7 @@ const NewPageInner = () => {
 
           <div className="mt-6 flex justify-between">
             <Button variant="ghost" onClick={() => setStep("details")} disabled={!jobId && !jobText}>
-              ← Back
+              {t("new.edit.back")}
             </Button>
             <Button onClick={async () => {
               const ok = await saveEdits();
@@ -457,7 +487,7 @@ const NewPageInner = () => {
               setStep("style");
               setBusy(false);
             }}>
-              Save &amp; style template →
+              {t("new.edit.save")}
             </Button>
           </div>
         </Card>
