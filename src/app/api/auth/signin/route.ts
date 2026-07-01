@@ -2,18 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 import { renderCvPdf } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmailHtml } from "@/lib/welcome-email";
-import { verifyCognitoToken } from "@/lib/cognito-server";
 import type { CVContent } from "@/lib/schemas";
 
 const SESSION_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "fallback-secret-change-me");
 const SESSION_COOKIE = "abcv_session";
-const REGION = process.env.COGNITO_REGION ?? "eu-north-1";
-const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "7dvpbjfnnk3irl8eimajk7gu86";
-
-const COGNITO_ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com`;
 
 function sampleCVContent(name: string): CVContent {
   const firstName = name.split(" ")[0];
@@ -93,80 +89,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email and password required" }, { status: 400 });
   }
 
-  try {
-    const res = await fetch(COGNITO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-amz-json-1.1",
-        "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-      },
-      body: JSON.stringify({
-        ClientId: CLIENT_ID,
-        AuthFlow: "USER_PASSWORD_AUTH",
-        AuthParameters: {
-          USERNAME: email,
-          PASSWORD: password,
-        },
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      const code = data.__type?.split("#")[1] ?? "Unknown";
-      if (code === "UserNotFoundException" || code === "NotAuthorizedException") {
-        return NextResponse.json({ error: "Invalid email or password", code }, { status: 401 });
-      }
-      if (code === "UserNotConfirmedException") {
-        return NextResponse.json({ error: "User not confirmed", code }, { status: 401 });
-      }
-      return NextResponse.json({ error: data.message ?? "Sign-in failed", code }, { status: 401 });
-    }
-
-    const authResult = data.AuthenticationResult;
-    if (!authResult?.AccessToken) {
-      return NextResponse.json({ error: "No access token returned" }, { status: 500 });
-    }
-
-    // Verify the token to get user info
-    const cognitoUser = await verifyCognitoToken(authResult.AccessToken);
-    if (!cognitoUser) {
-      return NextResponse.json({ error: "Failed to verify token" }, { status: 500 });
-    }
-
-    const name = cognitoUser.name ?? cognitoUser.email.split("@")[0];
-
-    // Create or update user in local DB
-    const existing = await prisma.user.findUnique({ where: { id: cognitoUser.sub } });
-    if (!existing) {
-      await prisma.user.create({
-        data: { id: cognitoUser.sub, email: cognitoUser.email, name },
-      });
-      sendWelcomeEmail(name, cognitoUser.email);
-    } else {
-      await prisma.user.update({
-        where: { id: cognitoUser.sub },
-        data: { email: cognitoUser.email, name: cognitoUser.name ?? undefined },
-      });
-    }
-
-    // Create session
-    const sessionToken = await new SignJWT({ sub: cognitoUser.sub, email: cognitoUser.email, name })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("7d")
-      .sign(SESSION_SECRET);
-
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 7 * 86400,
-    });
-
-    return NextResponse.json({ ok: true, email: cognitoUser.email });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "Sign-in failed" }, { status: 500 });
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.hashedPassword) {
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
+
+  const valid = await bcrypt.compare(password, user.hashedPassword);
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+  }
+
+  const name = user.name ?? email.split("@")[0];
+
+  // First sign-in — send welcome email
+  const createdRecently = Date.now() - user.createdAt.getTime() < 60_000;
+  if (createdRecently) {
+    sendWelcomeEmail(name, email);
+  }
+
+  const sessionToken = await new SignJWT({ sub: user.id, email: user.email, name })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(SESSION_SECRET);
+
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 86400,
+  });
+
+  return NextResponse.json({ ok: true, email: user.email });
 }

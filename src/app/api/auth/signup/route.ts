@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const REGION = process.env.COGNITO_REGION ?? "eu-north-1";
-const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "7dvpbjfnnk3irl8eimajk7gu86";
-
-const COGNITO_ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com`;
+import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   const { email, password, name } = await req.json().catch(() => ({}));
@@ -12,58 +9,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email, password, and name required" }, { status: 400 });
   }
 
+  // Basic client-side validation isn't enough — enforce server-side too
+  if (password.length < 8) {
+    return NextResponse.json(
+      { error: "Password must be at least 8 characters.", code: "WeakPassword" },
+      { status: 400 }
+    );
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return NextResponse.json(
+      { error: "An account with this email already exists. Sign in instead.", code: "EmailTaken" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const res = await fetch(COGNITO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-amz-json-1.1",
-        "X-Amz-Target": "AWSCognitoIdentityProviderService.SignUp",
-      },
-      body: JSON.stringify({
-        ClientId: CLIENT_ID,
-        Username: email,
-        Password: password,
-        UserAttributes: [
-          { Name: "email", Value: email },
-          { Name: "name", Value: name },
-        ],
-      }),
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    await prisma.user.create({
+      data: { email, name, hashedPassword },
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      const code = data.__type?.split("#")?.pop() ?? "Unknown";
-      console.error("Cognito SignUp error:", code, data.message);
-      if (code === "UsernameExistsException") {
-        return NextResponse.json(
-          { error: "An account with this email already exists. Sign in instead.", code },
-          { status: 400 }
-        );
-      }
-      if (code === "InvalidPasswordException") {
-        return NextResponse.json(
-          { error: "Password does not meet requirements (min 8 chars, upper + lower + number + symbol).", code },
-          { status: 400 }
-        );
-      }
-      if (code === "InvalidParameterException") {
-        const msg = data.message?.includes("password")
-          ? "Password format is invalid."
-          : data.message?.includes("username") || data.message?.includes("email")
-          ? "Email format is invalid."
-          : data.message ?? "Invalid input.";
-        return NextResponse.json({ error: msg, code }, { status: 400 });
-      }
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    if (e?.code === "P2002") {
       return NextResponse.json(
-        { error: data.message ?? "Sign-up failed", code },
+        { error: "An account with this email already exists.", code: "EmailTaken" },
         { status: 400 }
       );
     }
-
-    return NextResponse.json({ ok: true, userSub: data.UserSub });
-  } catch (e: any) {
-    console.error("Signup fetch error:", e);
-    return NextResponse.json({ error: e.message ?? "Sign-up failed" }, { status: 500 });
+    console.error("Signup error:", e);
+    return NextResponse.json({ error: "Sign-up failed" }, { status: 500 });
   }
 }

@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
-import { CognitoIdentityProvider } from "@aws-sdk/client-cognito-identity-provider";
 import crypto from "crypto";
-
-const REGION = process.env.COGNITO_REGION ?? "eu-north-1";
-const POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";
-
-const cognito = new CognitoIdentityProvider({ region: REGION });
 
 const OTP_EXPIRY_MINUTES = 15;
 const OTP_SECRET = process.env.NEXTAUTH_SECRET ?? "fallback-secret-change-me";
@@ -99,15 +93,6 @@ export async function POST(req: NextRequest) {
 
     // Delete used OTP
     await prisma.otp.delete({ where: { id: record.id } });
-
-    // Confirm user in Cognito
-    if (POOL_ID) {
-      try {
-        await cognito.adminConfirmSignUp({ UserPoolId: POOL_ID, Username: email });
-      } catch (e) {
-        console.warn("Failed to confirm user in Cognito:", e);
-      }
-    }
 
     return NextResponse.json({ ok: true });
   }
