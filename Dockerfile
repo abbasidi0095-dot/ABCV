@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV CHROME_BIN=/usr/bin/chromium
 
 RUN addgroup --system --gid 1001 nodejs
