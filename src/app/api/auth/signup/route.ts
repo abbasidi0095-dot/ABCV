@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
 
     if (!res.ok) {
-      const code = data.__type?.split("#")[1] ?? "Unknown";
+      const code = data.__type?.split("#")?.pop() ?? "Unknown";
+      console.error("Cognito SignUp error:", code, data.message);
       if (code === "UsernameExistsException") {
         return NextResponse.json(
           { error: "An account with this email already exists. Sign in instead.", code },
@@ -42,9 +43,17 @@ export async function POST(req: NextRequest) {
       }
       if (code === "InvalidPasswordException") {
         return NextResponse.json(
-          { error: data.message ?? "Password does not meet requirements.", code },
+          { error: "Password does not meet requirements (min 8 chars, upper + lower + number + symbol).", code },
           { status: 400 }
         );
+      }
+      if (code === "InvalidParameterException") {
+        const msg = data.message?.includes("password")
+          ? "Password format is invalid."
+          : data.message?.includes("username") || data.message?.includes("email")
+          ? "Email format is invalid."
+          : data.message ?? "Invalid input.";
+        return NextResponse.json({ error: msg, code }, { status: 400 });
       }
       return NextResponse.json(
         { error: data.message ?? "Sign-up failed", code },
@@ -54,6 +63,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, userSub: data.UserSub });
   } catch (e: any) {
+    console.error("Signup fetch error:", e);
     return NextResponse.json({ error: e.message ?? "Sign-up failed" }, { status: 500 });
   }
 }

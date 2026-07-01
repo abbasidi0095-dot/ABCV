@@ -15,7 +15,7 @@ async function api(url: string, body: unknown) {
     body: JSON.stringify(body),
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data.error ?? "Request failed");
+  if (!r.ok) throw new Error(data.code ? `[${data.code}] ${data.error}` : (data.error ?? "Request failed"));
   return data;
 }
 
