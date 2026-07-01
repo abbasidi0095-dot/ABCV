@@ -42,6 +42,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/templates ./templates
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+RUN for pkg in puppeteer puppeteer-core @puppeteer/browsers; do \
+      store_path=$(find /app/node_modules/.pnpm -maxdepth 1 -name "${pkg}@*" -type d 2>/dev/null | head -1); \
+      if [ -n "$store_path" ]; then \
+        ln -sf "$store_path/node_modules/$pkg" "/app/node_modules/$pkg"; \
+      fi; \
+    done
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma-client-bin ./node_modules/.prisma
 
