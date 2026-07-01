@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Link from "next/link";
-import { signUpUser, confirmUser, signInUser, signOutUser, getCognitoToken } from "@/lib/cognito";
+import { signUpUser, signInUser, signOutUser, getCognitoToken } from "@/lib/cognito";
 
 type AuthStep = "choice" | "signin" | "signup" | "confirm";
 
@@ -60,6 +60,15 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await signUpUser(email, password, name);
+      const r = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send", email }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error ?? "Failed to send OTP");
+      }
       toast.success("Verification code sent to your email");
       setStep("confirm");
       setTimeout(() => otpRef.current?.focus(), 100);
@@ -81,8 +90,15 @@ export default function LoginPage() {
     if (!otp) return;
     setBusy(true);
     try {
-      await confirmUser(email, otp);
-      await signOutUser().catch(() => {}); // clear any auto-session
+      const r = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", email, code: otp }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "Invalid code" }));
+        throw new Error(err.error ?? "Invalid code");
+      }
       toast.success("Email verified! You can now sign in.");
       setStep("signin");
       setOtp("");
