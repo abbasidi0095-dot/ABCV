@@ -1,20 +1,5 @@
 "use client";
-import { Amplify } from "aws-amplify";
 import { signIn, signUp, confirmSignUp, signOut, getCurrentUser, fetchAuthSession, type SignInOutput } from "aws-amplify/auth";
-
-const REGION = "eu-north-1";
-const POOL_ID = "eu-north-1_E5c8f7Wfz";
-const CLIENT_ID = "7dvpbjfnnk3irl8eimajk7gu86";
-
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: POOL_ID,
-      userPoolClientId: CLIENT_ID,
-      signUpVerificationMethod: "code",
-    },
-  },
-});
 
 export async function signUpUser(email: string, password: string, name: string) {
   await signUp({

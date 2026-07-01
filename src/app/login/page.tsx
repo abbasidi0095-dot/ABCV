@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Amplify } from "aws-amplify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,18 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    Amplify.configure({
+      Auth: {
+        Cognito: {
+          userPoolId: "eu-north-1_E5c8f7Wfz",
+          userPoolClientId: "7dvpbjfnnk3irl8eimajk7gu86",
+          signUpVerificationMethod: "code",
+        },
+      },
+    });
+  }, []);
 
   const createServerSession = async () => {
     const token = await getCognitoToken();
