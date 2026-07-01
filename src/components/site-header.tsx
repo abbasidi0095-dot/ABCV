@@ -23,8 +23,6 @@ export function SiteHeader() {
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
-    const { signOutUser } = await import("@/lib/cognito");
-    await signOutUser();
     window.location.href = "/";
   };
 

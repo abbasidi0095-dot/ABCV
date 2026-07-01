@@ -1,14 +1,23 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
-import { Amplify } from "aws-amplify";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Link from "next/link";
-import { signUpUser, signInUser, signOutUser, getCognitoToken } from "@/lib/cognito";
 
 type AuthStep = "choice" | "signin" | "signup" | "confirm";
+
+async function api(url: string, body: unknown) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error ?? "Request failed");
+  return data;
+}
 
 export default function LoginPage() {
   const [step, setStep] = useState<AuthStep>("choice");
@@ -19,44 +28,17 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    Amplify.configure({
-      Auth: {
-        Cognito: {
-          userPoolId: "eu-north-1_E5c8f7Wfz",
-          userPoolClientId: "7dvpbjfnnk3irl8eimajk7gu86",
-          signUpVerificationMethod: "code",
-        },
-      },
-    });
-  }, []);
-
-  const createServerSession = async () => {
-    const token = await getCognitoToken();
-    if (!token) throw new Error("No Cognito token available");
-    const r = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accessToken: token }),
-    });
-    if (!r.ok) throw new Error("Session creation failed");
-  };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setBusy(true);
     try {
-      await signOutUser().catch(() => {}); // clear stale session first
-      await signInUser(email, password);
-      await createServerSession();
+      await api("/api/auth/signin", { email, password });
       toast.success("Signed in");
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("UserNotFoundException") || msg.includes("NotAuthorizedException")) {
-        toast.error("Invalid email or password");
-      } else if (msg.includes("UserNotConfirmedException")) {
+      if (msg.includes("UserNotConfirmedException")) {
         toast.info("Please confirm your email first");
         setStep("confirm");
       } else {
@@ -72,27 +54,14 @@ export default function LoginPage() {
     if (!email || !password || !name) return;
     setBusy(true);
     try {
-      await signUpUser(email, password, name);
-      const r = await fetch("/api/auth/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", email }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "Failed" }));
-        throw new Error(err.error ?? "Failed to send OTP");
-      }
+      await api("/api/auth/signup", { email, password, name });
+      await api("/api/auth/otp", { action: "send", email });
       toast.success("Verification code sent to your email");
       setStep("confirm");
       setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("UsernameExistsException")) {
-        toast.error("An account with this email already exists. Sign in instead.");
-        setStep("signin");
-      } else {
-        toast.error("Sign-up failed", { description: msg });
-      }
+      toast.error("Sign-up failed", { description: msg });
     } finally {
       setBusy(false);
     }
@@ -103,15 +72,7 @@ export default function LoginPage() {
     if (!otp) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/auth/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "verify", email, code: otp }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "Invalid code" }));
-        throw new Error(err.error ?? "Invalid code");
-      }
+      await api("/api/auth/otp", { action: "verify", email, code: otp });
       toast.success("Email verified! You can now sign in.");
       setStep("signin");
       setOtp("");
