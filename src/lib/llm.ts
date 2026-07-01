@@ -101,5 +101,6 @@ function schemaDescriptionJson(schema: ZodTypeAny): string {
   if (schema instanceof z.ZodOptional) return `${schemaDescriptionJson(schema.unwrap())}?`;
   if (schema instanceof z.ZodDefault) return schemaDescriptionJson(schema.removeDefault());
   if (schema instanceof z.ZodUnion) return schema.options.map((o: ZodTypeAny) => schemaDescriptionJson(o)).join(" | ");
+  if (schema instanceof z.ZodEffects) return schemaDescriptionJson(schema.innerType());
   return "any";
 }

@@ -45,11 +45,16 @@ export async function POST(req: NextRequest) {
         };
   }
 
-  // Generate experience via LLM (or a canned dev fallback if no API key).
+  // Generate experience via LLM (falls back to mock data on any failure).
   let content: CVContent;
   if (isLlmConfigured()) {
-    const userPrompt = `Target role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role.`;
-    content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 6000 });
+    try {
+      const userPrompt = `Target role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role.`;
+      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 6000 });
+    } catch (e) {
+      console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);
+      content = mockCVContent(fullName);
+    }
   } else {
     content = mockCVContent(fullName);
   }

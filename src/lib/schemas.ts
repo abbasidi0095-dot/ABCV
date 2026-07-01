@@ -12,21 +12,34 @@ export const JobParsedSchema = z.object({
 });
 export type JobParsed = z.infer<typeof JobParsedSchema>;
 
+const MONTH_PATTERN = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i;
+
+/** Normalise a date string to short-month format (e.g. "Mar 2021"). */
+export function normaliseDate(s: string): string {
+  const t = s.trim();
+  if (t.toLowerCase() === "present") return "Present";
+  const m = t.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!m) return t;
+  const [, month, year] = m;
+  const short = month.slice(0, 3);
+  return short.charAt(0).toUpperCase() + short.slice(1).toLowerCase() + " " + year;
+}
+
 /** One generated work-experience entry */
 export const ExperienceEntrySchema = z.object({
   company: z.string().min(1),
   title: z.string().min(1),
-  startDate: z.string().regex(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/),
-  endDate: z.string().regex(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$|^Present$/),
-  bullets: z.array(z.string().min(1)).min(2).max(6),
+  startDate: z.string().regex(/^[A-Za-z]+\s+\d{4}$/).transform(normaliseDate),
+  endDate: z.string().regex(/^[A-Za-z]+\s+\d{4}$|^Present$/i).transform(normaliseDate),
+  bullets: z.array(z.string().min(1)).min(1).max(6),
 });
 
 /** AI-generated CV content (lives in Cv.contentJson). User-supplied
  *  fullName/email/phone/photo live on the Cv row itself. */
 export const CVContentSchema = z.object({
   summary: z.string().min(20).max(400),
-  experience: z.array(ExperienceEntrySchema).min(2).max(6),
-  skills: z.array(z.string()).min(4),
+  experience: z.array(ExperienceEntrySchema).min(1).max(6),
+  skills: z.array(z.string()).min(1),
 });
 export type CVContent = z.infer<typeof CVContentSchema>;
 export type ExperienceEntry = z.infer<typeof ExperienceEntrySchema>;

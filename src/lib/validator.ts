@@ -14,7 +14,8 @@ function parseMonthYear(s: string): number {
     return now.getFullYear() + now.getMonth() / 12;
   }
   const [m, y] = s.split(" ");
-  return Number(y) + MONTHS.indexOf(m) / 12;
+  const idx = MONTHS.indexOf(m.slice(0, 3));
+  return Number(y) + Math.max(0, idx) / 12;
 }
 
 export interface ValidationResult {
