@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   let content: CVContent;
   if (isLlmConfigured()) {
     try {
-      const userPrompt = `Language: ${language}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role. Write ALL content (summary, bullets, skills) in the specified language.`;
+      const userPrompt = `Language: ${language}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
       content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 6000 });
     } catch (e) {
       console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);

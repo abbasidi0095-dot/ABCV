@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, unauthorized } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { CVContentSchema, RenderInputSchema } from "@/lib/schemas";
+import { CVContentSchema, RenderInputSchema, type CVContent } from "@/lib/schemas";
 import { renderCvPdf } from "@/lib/pdf";
 import { JobParsedSchema } from "@/lib/schemas";
 
@@ -88,7 +88,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   let content;
   try { content = CVContentSchema.parse(cv.contentJson); } catch (e) {
-    return NextResponse.json({ error: "cv content invalid", detail: String(e) }, { status: 500 });
+    // Defensive: if stored content fails strict parsing (e.g., localised dates
+    // the LLM emitted despite the prompt), fall back to the raw stored object
+    // rather than returning 500 so the user still gets a PDF.
+    console.warn("Render route: content parse failed, using raw stored JSON:", (e as Error).message);
+    content = cv.contentJson as CVContent;
   }
 
   let pdf: Buffer;

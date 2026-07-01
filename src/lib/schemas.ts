@@ -12,16 +12,37 @@ export const JobParsedSchema = z.object({
 });
 export type JobParsed = z.infer<typeof JobParsedSchema>;
 
-const MONTH_PATTERN = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i;
+/** Month name → English short month, covering EN/FR/ES/DE. */
+const MONTH_MAP: Record<string, string> = {
+  // English
+  jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun",
+  jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
+  // French
+  janvier: "Jan", "févr": "Feb", fevr: "Feb", "février": "Feb", fevrier: "Feb",
+  mars: "Mar", avril: "Apr", mai: "May", juin: "Jun", juillet: "Jul",
+  "août": "Aug", aout: "Aug", septembre: "Sep", octobre: "Oct",
+  novembre: "Nov", "décembre": "Dec", decembre: "Dec",
+  // Spanish
+  enero: "Jan", febrero: "Feb", marzo: "Mar", abril: "Apr",
+  mayo: "May", junio: "Jun", julio: "Jul", agosto: "Aug",
+  septiembre: "Sep", setiembre: "Sep", octubre: "Oct",
+  noviembre: "Nov", diciembre: "Dec",
+  // German
+  januar: "Jan", februar: "Feb", "märz": "Mar", marz: "Mar",
+  mai_de: "May", juni: "Jun", juli: "Jul", // "mai" already French; "juni/juli" German
+};
 
-/** Normalise a date string to short-month format (e.g. "Mar 2021"). */
+/** Normalise a date string to short-month format (e.g. "Mar 2021").
+ *  Handles EN, FR, ES, DE month names (accented or not). */
 export function normaliseDate(s: string): string {
   const t = s.trim();
   if (t.toLowerCase() === "present") return "Present";
-  const m = t.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  // Unicode-aware: allow letters (including accents) followed by a year
+  const m = t.match(/^([\p{L}]+)\s+(\d{4})$/u);
   if (!m) return t;
-  const [, month, year] = m;
-  const short = month.slice(0, 3);
+  const [, monthRaw, year] = m;
+  const key = monthRaw.toLowerCase();
+  const short = MONTH_MAP[key] ?? monthRaw.slice(0, 3);
   return short.charAt(0).toUpperCase() + short.slice(1).toLowerCase() + " " + year;
 }
 
@@ -29,8 +50,9 @@ export function normaliseDate(s: string): string {
 export const ExperienceEntrySchema = z.object({
   company: z.string().min(1),
   title: z.string().min(1),
-  startDate: z.string().regex(/^[A-Za-z]+\s+\d{4}$/).transform(normaliseDate),
-  endDate: z.string().regex(/^[A-Za-z]+\s+\d{4}$|^Present$/i).transform(normaliseDate),
+  // Unicode-aware so accented month names (février, août) pass through
+  startDate: z.string().regex(/^[\p{L}]+\s+\d{4}$/u).transform(normaliseDate),
+  endDate: z.string().regex(/^[\p{L}]+\s+\d{4}$|^Present$/iu).transform(normaliseDate),
   bullets: z.array(z.string().min(1)).min(1).max(6),
 });
 
