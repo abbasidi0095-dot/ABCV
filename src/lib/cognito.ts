@@ -2,9 +2,9 @@
 import { Amplify } from "aws-amplify";
 import { signIn, signUp, confirmSignUp, signOut, getCurrentUser, fetchAuthSession, type SignInOutput } from "aws-amplify/auth";
 
-const REGION = process.env.NEXT_PUBLIC_COGNITO_REGION ?? "eu-north-1";
-const POOL_ID = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
+const REGION = "eu-north-1";
+const POOL_ID = "eu-north-1_E5c8f7Wfz";
+const CLIENT_ID = "7dvpbjfnnk3irl8eimajk7gu86";
 
 Amplify.configure({
   Auth: {
