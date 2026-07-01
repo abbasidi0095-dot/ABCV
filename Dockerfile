@@ -17,6 +17,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
+# Copy complete puppeteer packages from builder's pnpm store (standalone output is incomplete)
+RUN mkdir -p /app/puppeteer-store/.pnpm && \
+    for entry in puppeteer@23.11.1 puppeteer-core@23.11.1 @puppeteer+browsers@2.6.1; do \
+      dir=$(find /app/node_modules/.pnpm -maxdepth 1 -name "${entry}*" -type d | head -1); \
+      if [ -n "$dir" ]; then \
+        cp -r "$dir" "/app/puppeteer-store/.pnpm/$(basename "$dir")"; \
+      fi; \
+    done
 
 FROM base AS runner
 WORKDIR /app
@@ -44,7 +52,19 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma-client-bin ./node_modules/.prisma
-RUN npm install puppeteer@23.11.1 --no-save --no-package-lock --no-fund --no-audit
+# Replace incomplete puppeteer pnpm store entries with complete copies from builder
+RUN for entry in puppeteer@23.11.1 puppeteer-core@23.11.1 @puppeteer+browsers@2.6.1; do \
+      dir=$(find /app/node_modules/.pnpm -maxdepth 1 -name "${entry}*" -type d | head -1); \
+      if [ -n "$dir" ]; then \
+        rm -rf "$dir"; \
+      fi; \
+    done
+COPY --from=builder /app/puppeteer-store/.pnpm/ /app/node_modules/.pnpm/
+# Create symlinks for puppeteer packages from replaced pnpm store entries
+RUN mkdir -p /app/node_modules/@puppeteer && \
+    ln -sfn /app/node_modules/.pnpm/puppeteer@23.11.1_typescript@5.9.3/node_modules/puppeteer /app/node_modules/puppeteer && \
+    ln -sfn /app/node_modules/.pnpm/puppeteer-core@23.11.1/node_modules/puppeteer-core /app/node_modules/puppeteer-core && \
+    ln -sfn /app/node_modules/.pnpm/@puppeteer+browsers@2.6.1/node_modules/@puppeteer/browsers /app/node_modules/@puppeteer/browsers
 
 USER nextjs
 
