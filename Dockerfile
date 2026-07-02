@@ -76,4 +76,12 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+COPY --chmod=755 <<'START_SCRIPT' /app/start.sh
+#!/bin/sh
+echo "[start.sh] Running database migrations..."
+npx prisma migrate deploy 2>&1 || echo "[start.sh] Migration failed, continuing anyway..."
+echo "[start.sh] Starting application..."
+exec node server.js
+START_SCRIPT
+
+CMD ["/app/start.sh"]
