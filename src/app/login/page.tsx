@@ -1,12 +1,12 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Link from "next/link";
 
-type AuthStep = "choice" | "signin" | "signup" | "confirm";
+type AuthStep = "choice" | "signin" | "signup";
 
 async function api(url: string, body: unknown) {
   const r = await fetch(url, {
@@ -24,9 +24,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
-  const otpRef = useRef<HTMLInputElement>(null);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +36,7 @@ export default function LoginPage() {
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("UserNotConfirmedException")) {
-        toast.info("Please confirm your email first");
-        setStep("confirm");
-      } else {
-        toast.error("Sign-in failed", { description: msg });
-      }
+      toast.error("Sign-in failed", { description: msg });
     } finally {
       setBusy(false);
     }
@@ -55,29 +48,12 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await api("/api/auth/signup", { email, password, name });
-      await api("/api/auth/otp", { action: "send", email });
-      toast.success("Verification code sent to your email");
-      setStep("confirm");
-      setTimeout(() => otpRef.current?.focus(), 100);
+      await api("/api/auth/signin", { email, password });
+      toast.success("Account created — welcome!");
+      window.location.href = "/dashboard";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error("Sign-up failed", { description: msg });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleConfirm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp) return;
-    setBusy(true);
-    try {
-      await api("/api/auth/otp", { action: "verify", email, code: otp });
-      toast.success("Email verified! You can now sign in.");
-      setStep("signin");
-      setOtp("");
-    } catch (err: unknown) {
-      toast.error("Verification failed", { description: err instanceof Error ? err.message : "Invalid code" });
     } finally {
       setBusy(false);
     }
@@ -157,31 +133,13 @@ export default function LoginPage() {
               <Input id="su-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="su-password">Password (min 8 chars, upper + lower + number + symbol)</Label>
+              <Label htmlFor="su-password">Password (min 8 characters)</Label>
               <Input id="su-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} />
             </div>
             <Button type="submit" disabled={busy} className="w-full">
               {busy ? "Creating account…" : "Create account"}
             </Button>
             <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => setStep("choice")}>
-              ← Back
-            </button>
-          </form>
-        )}
-
-        {step === "confirm" && (
-          <form onSubmit={handleConfirm} className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enter the verification code sent to <strong>{email}</strong>
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="otp">Verification code</Label>
-              <Input ref={otpRef} id="otp" autoComplete="one-time-code" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
-            </div>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "Verifying…" : "Verify email"}
-            </Button>
-            <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => { setStep("choice"); setOtp(""); }}>
               ← Back
             </button>
           </form>
