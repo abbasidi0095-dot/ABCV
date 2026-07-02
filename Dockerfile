@@ -24,11 +24,11 @@ RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d 
 # Download a recent Chrome for Testing stable (the puppeteer-23 default 131
 # build's crashpad handler fails to launch in minimal containers).
 RUN apt-get update && apt-get install -y curl unzip --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
-    URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
-      | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).channels.Stable.downloads.chrome['linux64']))") && \
+    curl -sSL --retry 3 -o /tmp/cft.json https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json && \
+    URL=$(node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/cft.json','utf8'));console.log(d.channels.Stable.downloads.chrome['linux64'])") && \
     echo "Chrome for Testing URL: $URL" && \
     mkdir -p /app/chrome-bin && \
-    curl -sL "$URL" -o /tmp/chrome.zip && \
+    curl -sSL --retry 3 "$URL" -o /tmp/chrome.zip && \
     unzip -q /tmp/chrome.zip -d /app/chrome-bin && rm /tmp/chrome.zip && \
     chmod +x /app/chrome-bin/chrome-linux64/chrome && \
     ls /app/chrome-bin/chrome-linux64/
