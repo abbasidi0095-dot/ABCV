@@ -19,7 +19,7 @@ const baseURL =
   process.env.GEMINI_BASE_URL ||
   "https://integrate.api.nvidia.com/v1";
 const model =
-  process.env.LLM_MODEL || process.env.GEMINI_MODEL || "nvidia/nemotron-ultra-253b-v1";
+  process.env.LLM_MODEL || process.env.GEMINI_MODEL || "nvidia/llama-3.3-nemotron-super-49b-v1";
 
 /** True when the active provider accepts OpenAI JSON-mode. NVIDIA does not. */
 const PROVIDES_JSON_MODE = /generativelanguage\.googleapis\.com/.test(baseURL);
