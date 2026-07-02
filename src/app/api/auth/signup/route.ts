@@ -32,10 +32,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    const msg = e?.message ?? String(e);
-    const stack = e?.stack ?? "";
-    console.error("Signup error:", msg, stack);
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("Signup error:", err.message, err.stack ?? "");
     return NextResponse.json(
       { error: "Sign-up failed" },
       { status: 500 }

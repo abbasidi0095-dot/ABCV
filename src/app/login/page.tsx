@@ -1,10 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n";
+import { ArrowLeft } from "lucide-react";
 
 type AuthStep = "choice" | "signin" | "signup";
 
@@ -25,6 +28,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const { t } = useI18n();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cleanup = () => {};
+    (async () => {
+      try {
+        const { gsap } = await import("gsap");
+        if (cardRef.current) {
+          gsap.fromTo(cardRef.current, { y: 24, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" });
+          cleanup = () => gsap.killTweensOf(cardRef.current);
+        }
+      } catch {}
+    })();
+    return () => cleanup();
+  }, [step]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,11 +51,11 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await api("/api/auth/signin", { email, password });
-      toast.success("Signed in");
+      toast.success(t("login.success"));
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Sign-in failed", { description: msg });
+      toast.error(t("login.error"), { description: msg });
     } finally {
       setBusy(false);
     }
@@ -49,101 +68,97 @@ export default function LoginPage() {
     try {
       await api("/api/auth/signup", { email, password, name });
       await api("/api/auth/signin", { email, password });
-      toast.success("Account created — welcome!");
+      toast.success(t("login.success"));
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Sign-up failed", { description: msg });
+      toast.error(t("login.error"), { description: msg });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <div className="w-full max-w-sm space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome to abCV</h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in with your email, or create a new account.
-          </p>
+    <main className="flex flex-1 items-center justify-center px-4 py-12 sm:py-16">
+      <div ref={cardRef}>
+      <Card className="w-full max-w-sm rounded-2xl border-border/60 p-6 sm:p-8">
+        <div className="mb-6 text-center">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t("login.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("login.subtitle")}</p>
         </div>
 
-        {step === "choice" && (
-          <div className="space-y-3">
-            <Label htmlFor="choice-email">Email</Label>
-            <Input
-              id="choice-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-            <div className="flex gap-2">
-              <Button
-                className="flex-1"
-                disabled={!email || busy}
-                onClick={() => { if (email) setStep("signin"); }}
-              >
-                Sign in
-              </Button>
-              <Button
-                className="flex-1"
-                variant="outline"
-                disabled={!email || busy}
-                onClick={() => { if (email) setStep("signup"); }}
-              >
-                Create account
-              </Button>
+        <div className="space-y-4">
+          {step === "choice" && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="choice-email">{t("login.email")}</Label>
+                <Input
+                  id="choice-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1" disabled={!email || busy} onClick={() => { if (email) setStep("signin"); }}>
+                  {t("login.button")}
+                </Button>
+                <Button className="flex-1" variant="outline" disabled={!email || busy} onClick={() => { if (email) setStep("signup"); }}>
+                  Create account
+                </Button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                <Link href="/" className="underline">{t("login.back")}</Link>
+              </p>
             </div>
-            <p className="text-center text-xs text-muted-foreground">
-              <Link href="/" className="underline">Back home</Link>
-            </p>
-          </div>
-        )}
+          )}
 
-        {step === "signin" && (
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="si-email">Email</Label>
-              <Input id="si-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="si-password">Password</Label>
-              <Input id="si-password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "Signing in…" : "Sign in"}
-            </Button>
-            <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => setStep("choice")}>
-              ← Back
-            </button>
-          </form>
-        )}
+          {step === "signin" && (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="si-email">{t("login.email")}</Label>
+                <Input id="si-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="si-password">{t("login.password")}</Label>
+                <Input id="si-password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy ? t("login.signing") : t("login.button")}
+              </Button>
+              <button type="button" className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => setStep("choice")}>
+                <ArrowLeft className="size-3" />{t("login.back")}
+              </button>
+            </form>
+          )}
 
-        {step === "signup" && (
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="su-name">Full name</Label>
-              <Input id="su-name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="su-email">Email</Label>
-              <Input id="su-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="su-password">Password (min 8 characters)</Label>
-              <Input id="su-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} />
-            </div>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "Creating account…" : "Create account"}
-            </Button>
-            <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => setStep("choice")}>
-              ← Back
-            </button>
-          </form>
-        )}
+          {step === "signup" && (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="su-name">Full name</Label>
+                <Input id="su-name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="su-email">{t("login.email")}</Label>
+                <Input id="su-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="su-password">{t("login.password")}</Label>
+                <Input id="su-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} />
+              </div>
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy ? t("login.signing") : "Create account"}
+              </Button>
+              <button type="button" className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => setStep("choice")}>
+                <ArrowLeft className="size-3" />{t("login.back")}
+              </button>
+            </form>
+          )}
+        </div>
+      </Card>
       </div>
     </main>
   );

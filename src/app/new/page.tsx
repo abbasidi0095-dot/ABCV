@@ -10,8 +10,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { StepTransition } from "@/components/step-transition";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { ArrowLeft, ArrowRight, Plus, Trash2, RefreshCw, Download, Loader2, ChevronDown } from "lucide-react";
 
 type Step = "job" | "details" | "edit" | "style";
 
@@ -22,25 +31,21 @@ interface ParsedJob {
 interface ExperienceEntry {
   company: string; title: string; startDate: string; endDate: string; bullets: string[];
 }
-interface LanguageEntry {
-  name: string; level: "high" | "medium";
-}
 interface CVContent {
-  summary: string; experience: ExperienceEntry[]; skills: string[]; languages?: LanguageEntry[];
+  summary: string; experience: ExperienceEntry[]; skills: string[]; languages?: { name: string; level: "high" | "medium" }[];
 }
 interface CvResponse {
-  id: string;
-  fullName: string; email: string; phone: string;
-  templateId: string; accentColor: string; fontId: string;
-  contentJson: CVContent;
+  id: string; fullName: string; email: string; phone: string;
+  templateId: string; accentColor: string; fontId: string; contentJson: CVContent;
 }
 interface TemplateMeta {
-  id: string; name: string; description: string;
-  accentDefault: string; fonts: string[];
+  id: string; name: string; description: string; accentDefault: string; fonts: string[];
 }
 
+const ACCENT_SWATCHES = ["#2563eb", "#7c3aed", "#dc2626", "#059669", "#d946ef", "#ea580c", "#0d9488", "#475569"];
+
 const NewPage: NextPage = () => (
-  <Suspense fallback={<main className="mx-auto max-w-4xl flex-1 px-6 py-10 text-sm text-muted-foreground">Loading…</main>}>
+  <Suspense fallback={<main className="mx-auto max-w-4xl flex-1 px-4 py-10 text-sm text-muted-foreground">Loading…</main>}>
     <NewPageInner />
   </Suspense>
 );
@@ -52,9 +57,10 @@ const NewPageInner = () => {
 
   const [step, setStep] = useState<Step>("job");
   const [busy, setBusy] = useState(Boolean(editId));
+  const [prevStep, setPrevStep] = useState<Step>("job");
 
   // Step 1: job
-  const [jobMode, setJobMode] = useState<"url" | "text">("url");
+  const [jobMode, setJobMode] = useState<"url" | "text">("text");
   const [jobUrl, setJobUrl] = useState("");
   const [jobText, setJobText] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
@@ -70,7 +76,7 @@ const NewPageInner = () => {
   const [numExperiences, setNumExperiences] = useState(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 3/4: edit and style
+  // Step 3/4
   const [cvId, setCvId] = useState<string | null>(null);
   const [content, setContent] = useState<CVContent | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
@@ -82,128 +88,89 @@ const NewPageInner = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
 
-  // Cover letter
   const [coverLetterBody, setCoverLetterBody] = useState<string | null>(null);
   const [coverLetterBusy, setCoverLetterBusy] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
 
-  // Edit existing CV: jump straight to edit step.
+  const goStep = (s: Step) => { setPrevStep(step); setStep(s); };
+  const direction = (() => {
+    const order: Step[] = ["job", "details", "edit", "style"];
+    return order.indexOf(step) >= order.indexOf(prevStep) ? 1 : -1;
+  })();
+
   useEffect(() => {
     if (!editId) return;
     fetch(`/api/cvs/${editId}`)
       .then((r) => r.json())
       .then((d) => {
         const cv = d.cv as CvResponse;
-        setCvId(cv.id);
-        setFullName(cv.fullName);
-        setEmailDetail(cv.email);
-        setPhone(cv.phone);
-        setContent(cv.contentJson);
-        setTemplateId(cv.templateId);
-        setAccentColor(cv.accentColor);
-        setFontId(cv.fontId);
+        setCvId(cv.id); setFullName(cv.fullName); setEmailDetail(cv.email); setPhone(cv.phone);
+        setContent(cv.contentJson); setTemplateId(cv.templateId); setAccentColor(cv.accentColor); setFontId(cv.fontId);
         setStep("edit");
       })
       .catch(() => toast.error("Failed to load CV"))
       .finally(() => setBusy(false));
   }, [editId]);
 
-  // Load templates once (needed in style step).
   useEffect(() => {
-    fetch("/api/templates")
-      .then((r) => r.json())
-      .then((d) => setTemplates(d.templates))
-      .catch(() => {});
+    fetch("/api/templates").then((r) => r.json()).then((d) => setTemplates(d.templates)).catch(() => {});
   }, []);
 
-  // Refresh PDF preview whenever global fields change in style step.
   useEffect(() => {
     if (step !== "style" || !cvId) return;
-    const t = setTimeout(() => void refreshPdf(), 400);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => void refreshPdf(), 400);
+    return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, cvId, templateId, accentColor, fontId]);
 
-  // NOTE: refreshPdf is defined below as a function declaration (hoisted).
-
   const onPickFile = (f: File | null) => {
-    if (!f) return setPhoto(null), setPhotoUrl(null);
+    if (!f) { setPhoto(null); setPhotoUrl(null); return; }
     if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhoto(f);
-    setPhotoUrl(URL.createObjectURL(f));
+    setPhoto(f); setPhotoUrl(URL.createObjectURL(f));
   };
 
-  // Step 1 submit
   const analyzeJob = async () => {
     setBusy(true);
     try {
       const r = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          jobMode === "url" ? { sourceUrl: jobUrl } : { pastedText: jobText },
-        ),
+        body: JSON.stringify(jobMode === "url" ? { sourceUrl: jobUrl } : { pastedText: jobText }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail ?? d.error ?? "Failed");
-      setJobId(d.job.id);
-      setParsedJob(d.job.parsedJson as ParsedJob);
-      setStep("details");
-      toast.success("Job analyzed");
-    } catch (e) {
-      toast.error("Analyze failed", { description: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
+      setJobId(d.job.id); setParsedJob(d.job.parsedJson as ParsedJob);
+      goStep("details"); toast.success(t("new.toast.analyzed"));
+    } catch (e) { toast.error("Analyze failed", { description: (e as Error).message }); }
+    finally { setBusy(false); }
   };
 
-  // Step 2 submit — generate CV
   const generateCv = async () => {
-    if (!fullName || !emailDetail || !phone) {
-      toast.error("All fields are required");
-      return;
-    }
+    if (!fullName || !emailDetail || !phone) { toast.error("All fields are required"); return; }
     setBusy(true);
     try {
       const fd = new FormData();
       if (jobId) fd.set("jobId", jobId);
       if (jobText && !jobId) fd.set("pastedText", jobText);
-      fd.set("fullName", fullName);
-      fd.set("email", emailDetail);
-      fd.set("phone", phone);
-      fd.set("language", language);
-      fd.set("numExperiences", String(numExperiences));
+      fd.set("fullName", fullName); fd.set("email", emailDetail); fd.set("phone", phone);
+      fd.set("language", language); fd.set("numExperiences", String(numExperiences));
       if (photo) fd.set("photo", photo);
-
       const r = await fetch("/api/cvs", { method: "POST", body: fd });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail ?? d.error ?? "Failed");
-      setCvId(d.cv.id);
-      setContent(d.cv.contentJson as CVContent);
-      setIssues(d.issues ?? []);
-      setStep("edit");
-      toast.success("CV generated");
-    } catch (e) {
-      toast.error("Generation failed", { description: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
+      setCvId(d.cv.id); setContent(d.cv.contentJson as CVContent); setIssues(d.issues ?? []);
+      goStep("edit"); toast.success(t("new.toast.generated"));
+    } catch (e) { toast.error("Generation failed", { description: (e as Error).message }); }
+    finally { setBusy(false); }
   };
 
-  // Persist edits to server before going to style step.
   const saveEdits = async (): Promise<boolean> => {
     if (!cvId || !content) return false;
     const r = await fetch(`/api/cvs/${cvId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fullName, email: emailDetail, phone, content,
-      }),
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName, email: emailDetail, phone, content }),
     });
-    if (!r.ok) {
-      const d = await r.json().catch(() => ({}));
-      toast.error("Save failed", { description: d.detail ?? "" });
-      return false;
-    }
+    if (!r.ok) { const d = await r.json().catch(() => ({})); toast.error(t("new.toast.save_failed"), { description: d.detail ?? "" }); return false; }
     return true;
   };
 
@@ -211,92 +178,55 @@ const NewPageInner = () => {
     if (!cvId) return;
     setRendering(true);
     try {
-      const ok = await saveEdits();
-      if (!ok) return;
+      const ok = await saveEdits(); if (!ok) return;
       const r = await fetch(`/api/cvs/${cvId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId, accentColor, fontId }),
       });
       if (!r.ok) throw new Error("Render failed");
       const blob = await r.blob();
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
       setPdfUrl(URL.createObjectURL(blob));
-    } catch (e) {
-      toast.error("Preview failed", { description: (e as Error).message });
-    } finally {
-      setRendering(false);
-    }
+    } catch (e) { toast.error("Preview failed", { description: (e as Error).message }); }
+    finally { setRendering(false); }
   }
 
   const downloadPdf = async () => {
     if (!cvId) return;
     try {
       const r = await fetch(`/api/cvs/${cvId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId, accentColor, fontId }),
       });
       if (!r.ok) throw new Error("Render failed");
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_CV.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast.error("Download failed", { description: (e as Error).message });
-    }
+      const blob = await r.blob(); const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url;
+      a.download = `${fullName.replace(/\s+/g, "_")}_CV.pdf`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.error("Download failed", { description: (e as Error).message }); }
   };
 
-  // Edit helpers
   const patchExperience = (i: number, patch: Partial<ExperienceEntry>) => {
-    setContent((c) => {
-      if (!c) return c;
-      const exp = [...c.experience];
-      exp[i] = { ...exp[i], ...patch };
-      return { ...c, experience: exp };
-    });
+    setContent((c) => { if (!c) return c; const exp = [...c.experience]; exp[i] = { ...exp[i], ...patch }; return { ...c, experience: exp }; });
   };
   const addExperience = () => {
-    setContent((c) => {
-      if (!c) return c;
-      const newEntry: ExperienceEntry = { company: "", title: "", startDate: "", endDate: "", bullets: [""] };
-      return { ...c, experience: [...c.experience, newEntry] };
-    });
+    setContent((c) => c ? { ...c, experience: [...c.experience, { company: "", title: "", startDate: "", endDate: "", bullets: [""] }] } : c);
   };
   const removeExperience = (i: number) => {
-    setContent((c) => {
-      if (!c) return c;
-      const exp = c.experience.filter((_, idx) => idx !== i);
-      return { ...c, experience: exp };
-    });
+    setContent((c) => c ? { ...c, experience: c.experience.filter((_, idx) => idx !== i) } : c);
   };
-  const skillsValue = content?.skills ?? [];
   const setSkills = (csv: string) => {
     const arr = csv.split(",").map((s) => s.trim()).filter(Boolean);
-    setContent((c) => (c ? { ...c, skills: arr } : c));
+    setContent((c) => c ? { ...c, skills: arr } : c);
   };
 
   const generateCoverLetter = async () => {
-    if (!cvId) return;
-    setCoverLetterBusy(true);
+    if (!cvId) return; setCoverLetterBusy(true);
     try {
-      const r = await fetch(`/api/cvs/${cvId}/cover-letter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language }),
-      });
+      const r = await fetch(`/api/cvs/${cvId}/cover-letter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ language }) });
       if (!r.ok) throw new Error("Generation failed");
-      const d = await r.json();
-      setCoverLetterBody(d.body);
-      toast.success("Cover letter generated");
-    } catch (e) {
-      toast.error("Cover letter failed", { description: (e as Error).message });
-    } finally {
-      setCoverLetterBusy(false);
-    }
+      const d = await r.json(); setCoverLetterBody(d.body); toast.success("Cover letter generated");
+    } catch (e) { toast.error("Cover letter failed", { description: (e as Error).message }); }
+    finally { setCoverLetterBusy(false); }
   };
 
   const downloadCoverLetter = async () => {
@@ -304,352 +234,311 @@ const NewPageInner = () => {
     try {
       const r = await fetch(`/api/cvs/${cvId}/cover-letter?download=true`);
       if (!r.ok) throw new Error("Download failed");
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_Cover_Letter.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast.error("Download failed", { description: (e as Error).message });
-    }
+      const blob = await r.blob(); const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url;
+      a.download = `${fullName.replace(/\s+/g, "_")}_Cover_Letter.pdf`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.error("Download failed", { description: (e as Error).message }); }
   };
 
   const activeTemplate = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Stepper step={step} />
 
-      {step === "job" && (
-        <Card className="mt-6 p-6">
-          <h2 className="text-lg font-semibold">Tell us about the role</h2>
-          <p className="text-sm text-muted-foreground">
-            We&apos;ll extract required skills, responsibilities, and keywords, then tailor a CV to match.
-          </p>
-          <div className="mt-5">
-            <Tabs value={jobMode} onValueChange={(v) => setJobMode(v as "url" | "text")}>
-              <TabsList>
-                <TabsTrigger value="url">Paste job URL</TabsTrigger>
-                <TabsTrigger value="text">Paste job text</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {jobMode === "url" ? (
-              <div className="mt-4 space-y-2">
-                <Label htmlFor="job-url">Job posting URL</Label>
-                <Input
-                  id="job-url"
-                  type="url"
-                  placeholder="https://jobs.example.com/senior-frontend-engineer"
-                  value={jobUrl}
-                  onChange={(e) => setJobUrl(e.target.value)}
-                />
-              </div>
-            ) : (
-              <div className="mt-4 space-y-2">
-                <Label htmlFor="job-text">Paste full job description</Label>
-                <Textarea
-                  id="job-text"
-                  rows={10}
-                  placeholder="We are hiring a Senior Frontend Engineer who…"
-                  value={jobText}
-                  onChange={(e) => setJobText(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-          <div className="mt-5 flex items-center justify-between">
-            <Button asChild variant="ghost"><Link href="/dashboard">Cancel</Link></Button>
-            <Button onClick={analyzeJob} disabled={busy || (jobMode === "url" ? !jobUrl : jobText.length < 50)}>
-              {busy ? "Analyzing…" : "Analyze role"}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {step === "details" && parsedJob && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Card className="p-5">
-            <h2 className="text-lg font-semibold">Role summary</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              <strong className="text-foreground">{parsedJob.jobTitle}</strong>
-              {parsedJob.company ? ` at ${parsedJob.company}` : ""}
-              {parsedJob.location ? ` · ${parsedJob.location}` : ""}
-              {parsedJob.yearsExperience ? ` · ${parsedJob.yearsExperience}+ yrs` : ""}
-            </p>
-            <div className="mt-3">
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground">Required skills</h4>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {parsedJob.requiredSkills.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
-                {parsedJob.requiredSkills.length === 0 && <span className="text-xs text-muted-foreground">none detected</span>}
-              </div>
-            </div>
-            <div className="mt-3">
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground">Responsibilities</h4>
-              <ul className="mt-1 list-disc pl-5 text-sm">
-                {parsedJob.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
-              </ul>
-            </div>
-            <div className="mt-4">
-              <Button variant="outline" size="sm" onClick={() => setStep("job")}>← Edit job</Button>
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <h2 className="text-lg font-semibold">Your details</h2>
-            <p className="text-sm text-muted-foreground">
-              These go straight onto the CV header. Experience is generated for you.
-            </p>
-            <div className="mt-4 space-y-3">
-              <div>
-                <Label htmlFor="fullName">Full name</Label>
-                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={emailDetail} onChange={(e) => setEmailDetail(e.target.value)} placeholder="jane@example.com" />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 555 1234" />
-              </div>
-              <div>
-                <Label htmlFor="cv-language">{t("new.details.language")}</Label>
-                <select
-                  id="cv-language"
-                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                >
-                  <option value="en">English</option>
-                  <option value="fr">Français</option>
-                  <option value="es">Español</option>
-                  <option value="de">Deutsch</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="num-experiences">{t("new.details.numExperiences")}</Label>
-                <select
-                  id="num-experiences"
-                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  value={numExperiences}
-                  onChange={(e) => setNumExperiences(parseInt(e.target.value, 10))}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="photo">Photo <span className="text-muted-foreground">(any image — we&apos;ll crop &amp; compress)</span></Label>
-                <div className="mt-1 flex items-center gap-3">
-                  <input
-                    ref={fileInputRef}
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-                  />
-                  {photoUrl ? (
-                    <img src={photoUrl} alt="preview" className="size-16 rounded-md object-cover border" />
-                  ) : (
-                    <div className="grid size-16 place-items-center rounded-md border text-xs text-muted-foreground">3:4</div>
-                  )}
-                  <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                    {photo ? "Change" : "Upload"}
-                  </Button>
-                  {photo && <Button type="button" size="sm" variant="ghost" onClick={() => onPickFile(null)}>Remove</Button>}
+      <StepTransition stepKey={step} direction={direction}>
+        {step === "job" && (
+          <Card className="mt-5 rounded-2xl p-5 sm:p-6">
+            <h2 className="text-lg font-semibold">Tell us about the role</h2>
+            <p className="text-sm text-muted-foreground">We&apos;ll extract required skills, responsibilities, and keywords, then tailor a CV to match.</p>
+            <div className="mt-5">
+              <Tabs value={jobMode} onValueChange={(v) => setJobMode(v as "url" | "text")}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="text" className="flex-1">Paste job text</TabsTrigger>
+                  <TabsTrigger value="url" className="flex-1">Paste job URL</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {jobMode === "url" ? (
+                <div className="mt-4 space-y-1.5">
+                  <Label htmlFor="job-url">Job posting URL</Label>
+                  <Input id="job-url" type="url" inputMode="url" placeholder="https://jobs.example.com/senior-engineer" value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} />
                 </div>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end">
-              <Button onClick={generateCv} disabled={busy}>
-                {busy ? "Generating…" : "Generate CV →"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {step === "edit" && content && (
-        <Card className="mt-6 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t("new.edit.title")}</h2>
-            {issues.length > 0 && (
-              <span className="text-xs text-amber-600">{issues.length} validation warnings — saved anyway</span>
-            )}
-          </div>
-
-          <div className="mt-5 space-y-5">
-            <div>
-              <Label>{t("new.edit.summary")}</Label>
-              <Textarea
-                rows={3}
-                value={content.summary}
-                onChange={(e) => setContent((c) => (c ? { ...c, summary: e.target.value } : c))}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Experience</Label>
-              <Button type="button" size="sm" variant="outline" onClick={addExperience}>
-                {t("new.edit.add")}
-              </Button>
-            </div>
-
-            {content.experience.map((e, i) => (
-              <div key={i} className="rounded-lg border p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">#{i + 1}</span>
-                  <Button type="button" size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => removeExperience(i)}>
-                    {t("new.edit.remove")}
-                  </Button>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label>{t("new.edit.title.label")}</Label>
-                    <Input value={e.title} onChange={(ev) => patchExperience(i, { title: ev.target.value })} />
-                  </div>
-                  <div>
-                    <Label>{t("new.edit.company")}</Label>
-                    <Input value={e.company} onChange={(ev) => patchExperience(i, { company: ev.target.value })} />
-                  </div>
-                  <div>
-                    <Label>{t("new.edit.start")}</Label>
-                    <Input value={e.startDate} onChange={(ev) => patchExperience(i, { startDate: ev.target.value })} placeholder="Mar 2021" />
-                  </div>
-                  <div>
-                    <Label>{t("new.edit.end")}</Label>
-                    <Input value={e.endDate} onChange={(ev) => patchExperience(i, { endDate: ev.target.value })} placeholder="Present" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <Label>{t("new.edit.bullets")}</Label>
-                  <Textarea
-                    rows={Math.max(3, e.bullets.length)}
-                    value={e.bullets.join("\n")}
-                    onChange={(ev) => {
-                      const lines = ev.target.value.split("\n");
-                      setContent((c) => {
-                        if (!c) return c;
-                        const exp = [...c.experience];
-                        exp[i] = { ...exp[i], bullets: lines };
-                        return { ...c, experience: exp };
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-            <div>
-              <Label>{t("new.edit.skills")}</Label>
-              <Input
-                value={skillsValue.join(", ")}
-                onChange={(e) => setSkills(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-between">
-            <Button variant="ghost" onClick={() => setStep("details")} disabled={!jobId && !jobText}>
-              {t("new.edit.back")}
-            </Button>
-            <Button onClick={async () => {
-              const ok = await saveEdits();
-              if (!ok) return;
-              setStep("style");
-              setBusy(false);
-            }}>
-              {t("new.edit.save")}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {step === "style" && (
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_2fr]">
-          <Card className="p-5">
-            <h2 className="text-lg font-semibold">Template</h2>
-            <div className="mt-3 space-y-2">
-              {templates.map((t) => (
-                <label key={t.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${templateId === t.id ? "border-primary ring-1 ring-primary" : ""}`}>
-                  <input type="radio" name="template" className="mt-1" checked={templateId === t.id} onChange={() => setTemplateId(t.id)} />
-                  <div>
-                    <p className="font-medium">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.description}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <div>
-                <Label>Accent color</Label>
-                <div className="mt-1 flex items-center gap-2">
-                  <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="size-10 cursor-pointer rounded-md border" />
-                  <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="max-w-32 font-mono" />
-                </div>
-              </div>
-              <div>
-                <Label>Font</Label>
-                <select
-                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  value={fontId}
-                  onChange={(e) => setFontId(e.target.value)}
-                >
-                  {(activeTemplate?.fonts ?? ["inter"]).map((f) => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-2">
-              <Button onClick={refreshPdf} disabled={rendering} variant="outline">
-                {rendering ? "Rendering…" : "Refresh preview"}
-              </Button>
-              <Button onClick={downloadPdf} disabled={rendering}>Download PDF</Button>
-            </div>
-
-            <hr className="my-5" />
-
-            <h3 className="text-sm font-semibold">{t("new.cover.title")}</h3>
-            {!coverLetterBody ? (
-              <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" className="mt-2 w-full">
-                {coverLetterBusy ? t("new.cover.generating") : t("new.cover.generate")}
-              </Button>
-            ) : (
-              <div className="mt-2 space-y-3">
-                <Textarea
-                  rows={8}
-                  value={coverLetterBody}
-                  onChange={(e) => setCoverLetterBody(e.target.value)}
-                  className="text-xs"
-                />
-                <div className="flex gap-2">
-                  <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" size="sm">
-                    {coverLetterBusy ? t("new.cover.generating") : t("new.cover.regenerate")}
-                  </Button>
-                  <Button onClick={downloadCoverLetter} size="sm">{t("new.cover.download")}</Button>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-3">
-            <h2 className="px-2 py-2 text-sm font-medium text-muted-foreground">PDF preview</h2>
-            <div className="aspect-[210/297] w-full overflow-hidden rounded-md border bg-muted/30">
-              {pdfUrl ? (
-                <iframe src={pdfUrl} className="h-full w-full" title="CV preview" />
               ) : (
-                <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                  Click <em>Refresh preview</em> to render.
+                <div className="mt-4 space-y-1.5">
+                  <Label htmlFor="job-text">Paste full job description</Label>
+                  <Textarea id="job-text" rows={8} placeholder="We are hiring a Senior Engineer who…" value={jobText} onChange={(e) => setJobText(e.target.value)} />
                 </div>
               )}
             </div>
+            <div className="mt-5 flex items-center justify-between gap-2">
+              <Button asChild variant="ghost"><Link href="/dashboard"><ArrowLeft className="size-4" />{t("new.job.cancel")}</Link></Button>
+              <Button onClick={analyzeJob} disabled={busy || (jobMode === "url" ? !jobUrl : jobText.length < 50)}>
+                {busy ? <><Loader2 className="size-4 animate-spin" />{t("new.job.analyzing")}</> : <>{t("new.job.analyze")}<ArrowRight className="size-4" /></>}
+              </Button>
+            </div>
           </Card>
-        </div>
-      )}
+        )}
+
+        {step === "details" && parsedJob && (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold">Role summary</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                <strong className="text-foreground">{parsedJob.jobTitle}</strong>
+                {parsedJob.company ? ` at ${parsedJob.company}` : ""}
+                {parsedJob.location ? ` · ${parsedJob.location}` : ""}
+                {parsedJob.yearsExperience ? ` · ${parsedJob.yearsExperience}+ yrs` : ""}
+              </p>
+              <div className="mt-3">
+                <h4 className="text-xs uppercase tracking-wide text-muted-foreground">{t("new.role.skills")}</h4>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {parsedJob.requiredSkills.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
+                  {parsedJob.requiredSkills.length === 0 && <span className="text-xs text-muted-foreground">{t("new.role.none")}</span>}
+                </div>
+              </div>
+              <div className="mt-3">
+                <h4 className="text-xs uppercase tracking-wide text-muted-foreground">{t("new.role.responsibilities")}</h4>
+                <ul className="mt-1 list-disc pl-5 text-sm">
+                  {parsedJob.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              </div>
+              <div className="mt-4">
+                <Button variant="outline" size="sm" onClick={() => goStep("job")}><ArrowLeft className="size-4" />{t("new.role.edit")}</Button>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold">{t("new.details.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("new.details.subtitle")}</p>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName">{t("new.details.fullname")}</Label>
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" inputMode="email" value={emailDetail} onChange={(e) => setEmailDetail(e.target.value)} placeholder="jane@example.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">{t("new.details.phone")}</Label>
+                  <Input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 123 4567" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("new.details.language")}</Label>
+                  <Select value={language} onValueChange={(v) => v && setLanguage(v)}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                      <SelectItem value="de">Deutsch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("new.details.numExperiences")}</Label>
+                  <Select value={String(numExperiences)} onValueChange={(v) => v && setNumExperiences(parseInt(v, 10))}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="photo">{t("new.details.photo")} <span className="text-muted-foreground">({t("new.details.photo.hint")})</span></Label>
+                  <div className="flex items-center gap-3">
+                    <input ref={fileInputRef} id="photo" type="file" accept="image/*" hidden onChange={(e) => onPickFile(e.target.files?.[0] ?? null)} />
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoUrl} alt="preview" className="size-16 rounded-md object-cover border" />
+                    ) : (
+                      <div className="grid size-16 place-items-center rounded-md border text-xs text-muted-foreground">3:4</div>
+                    )}
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      {photo ? t("new.details.change") : t("new.details.upload")}
+                    </Button>
+                    {photo && <Button type="button" size="sm" variant="ghost" onClick={() => onPickFile(null)}>{t("new.details.remove")}</Button>}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end">
+                <Button onClick={generateCv} disabled={busy} className="w-full sm:w-auto">
+                  {busy ? <><Loader2 className="size-4 animate-spin" />{t("new.details.generating")}</> : <>{t("new.details.generate")}<ArrowRight className="size-4" /></>}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {step === "edit" && content && (
+          <Card className="mt-5 rounded-2xl p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">{t("new.edit.title")}</h2>
+              {issues.length > 0 && (
+                <span className="text-xs text-amber-600">{issues.length} validation warnings — saved anyway</span>
+              )}
+            </div>
+            <div className="mt-5 space-y-5">
+              <div className="space-y-1.5">
+                <Label>{t("new.edit.summary")}</Label>
+                <Textarea rows={3} value={content.summary} onChange={(e) => setContent((c) => c ? { ...c, summary: e.target.value } : c)} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Experience</Label>
+                <Button type="button" size="sm" variant="outline" onClick={addExperience}><Plus className="size-4" />{t("new.edit.add")}</Button>
+              </div>
+              {content.experience.map((e, i) => (
+                <div key={i} className="rounded-lg border p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">#{i + 1}</span>
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => removeExperience(i)}>
+                      <Trash2 className="size-3.5" />{t("new.edit.remove")}
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("new.edit.title.label")}</Label>
+                      <Input value={e.title} onChange={(ev) => patchExperience(i, { title: ev.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("new.edit.company")}</Label>
+                      <Input value={e.company} onChange={(ev) => patchExperience(i, { company: ev.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("new.edit.start")}</Label>
+                      <Input value={e.startDate} onChange={(ev) => patchExperience(i, { startDate: ev.target.value })} placeholder="Mar 2021" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("new.edit.end")}</Label>
+                      <Input value={e.endDate} onChange={(ev) => patchExperience(i, { endDate: ev.target.value })} placeholder="Present" />
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <Label className="text-xs">{t("new.edit.bullets")}</Label>
+                    <Textarea rows={Math.max(3, e.bullets.length)} value={e.bullets.join("\n")} onChange={(ev) => {
+                      const lines = ev.target.value.split("\n");
+                      setContent((c) => { if (!c) return c; const exp = [...c.experience]; exp[i] = { ...exp[i], bullets: lines }; return { ...c, experience: exp }; });
+                    }} />
+                  </div>
+                </div>
+              ))}
+              <div className="space-y-1.5">
+                <Label>{t("new.edit.skills")}</Label>
+                <Input value={(content.skills ?? []).join(", ")} onChange={(e) => setSkills(e.target.value)} />
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <Button variant="ghost" onClick={() => goStep("details")} disabled={!jobId && !jobText}><ArrowLeft className="size-4" />{t("new.edit.back")}</Button>
+              <Button onClick={async () => { if (await saveEdits()) { goStep("style"); setBusy(false); } }}>
+                {t("new.edit.save")}<ArrowRight className="size-4" />
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {step === "style" && (
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_2fr]">
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold">{t("new.style.title")}</h2>
+
+              {/* Template dropdown */}
+              <div className="mt-3 space-y-1.5">
+                <Label>Template</Label>
+                <Select value={templateId} onValueChange={(v) => v && setTemplateId(v)}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {templates.map((tm) => (
+                      <SelectItem key={tm.id} value={tm.id}>{tm.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {activeTemplate && <p className="text-xs text-muted-foreground">{activeTemplate.description}</p>}
+              </div>
+
+              {/* Accent color — swatch grid + custom */}
+              <div className="mt-4 space-y-1.5">
+                <Label>{t("new.style.accent")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {ACCENT_SWATCHES.map((c) => (
+                    <button
+                      key={c} type="button" onClick={() => setAccentColor(c)}
+                      className={`size-8 rounded-full border-2 transition-transform hover:scale-110 ${accentColor === c ? "border-foreground" : "border-transparent"}`}
+                      style={{ backgroundColor: c }}
+                      aria-label={`Accent ${c}`}
+                    />
+                  ))}
+                  <label className="relative size-8 cursor-pointer rounded-full border-2 border-dashed border-border overflow-hidden" style={{ background: accentColor }}>
+                    <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Font dropdown */}
+              <div className="mt-4 space-y-1.5">
+                <Label>{t("new.style.font")}</Label>
+                <Select value={fontId} onValueChange={(v) => v && setFontId(v)}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(activeTemplate?.fonts ?? ["inter"]).map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-2">
+                <Button onClick={refreshPdf} disabled={rendering} variant="outline" className="w-full">
+                  {rendering ? <><Loader2 className="size-4 animate-spin" />{t("new.style.rendering")}</> : <><RefreshCw className="size-4" />{t("new.style.refresh")}</>}
+                </Button>
+                <Button onClick={downloadPdf} disabled={rendering} className="w-full">
+                  <Download className="size-4" />{t("new.style.download")}
+                </Button>
+              </div>
+
+              {/* Cover letter collapsible */}
+              <button type="button" onClick={() => setCoverOpen((v) => !v)} className="mt-5 flex w-full items-center justify-between text-sm font-semibold">
+                {t("new.cover.title")}
+                <ChevronDown className={`size-4 transition-transform ${coverOpen ? "rotate-180" : ""}`} />
+              </button>
+              {coverOpen && (
+                <div className="mt-3 space-y-3">
+                  {!coverLetterBody ? (
+                    <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" className="w-full">
+                      {coverLetterBusy ? <><Loader2 className="size-4 animate-spin" />{t("new.cover.generating")}</> : t("new.cover.generate")}
+                    </Button>
+                  ) : (
+                    <>
+                      <Textarea rows={6} value={coverLetterBody} onChange={(e) => setCoverLetterBody(e.target.value)} className="text-xs" />
+                      <div className="flex gap-2">
+                        <Button onClick={generateCoverLetter} disabled={coverLetterBusy} variant="outline" size="sm" className="flex-1">
+                          {coverLetterBusy ? t("new.cover.generating") : t("new.cover.regenerate")}
+                        </Button>
+                        <Button onClick={downloadCoverLetter} size="sm" className="flex-1">{t("new.cover.download")}</Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </Card>
+
+            {/* PDF preview */}
+            <Card className="p-3">
+              <h2 className="px-2 py-2 text-sm font-medium text-muted-foreground">{t("new.style.preview")}</h2>
+              <div className="aspect-[210/297] w-full overflow-hidden rounded-md border bg-muted/30">
+                {pdfUrl ? (
+                  <iframe src={pdfUrl} className="h-full w-full" title="CV preview" />
+                ) : rendering ? (
+                  <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                    <><Loader2 className="size-5 animate-spin" /> {t("new.style.rendering")}</>
+                  </div>
+                ) : (
+                  <div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
+                    {t("new.style.preview.empty")}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+      </StepTransition>
     </main>
   );
 };
@@ -659,14 +548,14 @@ function Stepper({ step }: { step: Step }) {
   const labels: Record<Step, string> = { job: "Job", details: "Details", edit: "Edit", style: "Style" };
   const idx = order.indexOf(step);
   return (
-    <ol className="flex items-center gap-2 text-xs">
+    <ol className="flex items-center gap-1 text-xs sm:gap-2">
       {order.map((s, i) => (
-        <li key={s} className="flex items-center gap-2">
-          <span className={`grid size-6 place-items-center rounded-full border ${i <= idx ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}>
+        <li key={s} className="flex items-center gap-1 sm:gap-2">
+          <span className={`grid size-6 place-items-center rounded-full border text-[10px] sm:text-xs transition-colors ${i <= idx ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}>
             {i + 1}
           </span>
-          <span className={i === idx ? "font-medium text-foreground" : "text-muted-foreground"}>{labels[s]}</span>
-          {i < order.length - 1 && <span className="mx-1 h-px w-6 bg-border" />}
+          <span className={`${i === idx ? "font-medium text-foreground" : "hidden text-muted-foreground sm:inline"}`}>{labels[s]}</span>
+          {i < order.length - 1 && <span className="h-px w-4 bg-border sm:w-6" />}
         </li>
       ))}
     </ol>
