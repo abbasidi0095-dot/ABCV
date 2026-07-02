@@ -106,12 +106,12 @@ export default function LoginPage() {
                 <Button className="flex-1" disabled={!email || busy} onClick={() => { if (email) setStep("signin"); }}>
                   {t("login.button")}
                 </Button>
-                <Button className="flex-1" variant="outline" disabled={!email || busy} onClick={() => { if (email) setStep("signup"); }}>
+                <Button className="flex-1" variant="secondary" disabled={!email || busy} onClick={() => { if (email) setStep("signup"); }}>
                   Create account
                 </Button>
               </div>
-              <p className="text-center text-xs text-muted-foreground">
-                <Link href="/" className="underline">{t("login.back")}</Link>
+              <p className="pt-1 text-center">
+                <Link href="/" className="text-sm text-primary hover:underline">{t("login.back")}</Link>
               </p>
             </div>
           )}
@@ -129,9 +129,9 @@ export default function LoginPage() {
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? t("login.signing") : t("login.button")}
               </Button>
-              <button type="button" className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => setStep("choice")}>
-                <ArrowLeft className="size-3" />{t("login.back")}
-              </button>
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setStep("choice")}>
+                <ArrowLeft className="size-4" />{t("login.back")}
+              </Button>
             </form>
           )}
 
@@ -152,9 +152,9 @@ export default function LoginPage() {
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? t("login.signing") : "Create account"}
               </Button>
-              <button type="button" className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => setStep("choice")}>
-                <ArrowLeft className="size-3" />{t("login.back")}
-              </button>
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setStep("choice")}>
+                <ArrowLeft className="size-4" />{t("login.back")}
+              </Button>
             </form>
           )}
         </div>

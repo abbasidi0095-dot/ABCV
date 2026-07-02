@@ -7,7 +7,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/60 px-6 py-8 text-center">
       <p className="text-xs text-muted-foreground">
-        {t("footer.powered")} — ab<span className="text-primary font-medium">CV</span>
+        ab<span className="text-primary font-medium">CV</span> — {t("app.tagline")}
       </p>
     </footer>
   );
