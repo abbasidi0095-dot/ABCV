@@ -8,6 +8,21 @@ import { LEVEL_LABELS, UI_LABELS } from "@/lib/languages";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "templates");
 
+/** Chromium launch flags tuned to work in containerized environments (Docker/Render). */
+const CHROMIUM_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--disable-software-rasterizer",
+  "--no-zygote",
+  "--font-render-hinting=none",
+  // Avoid invoking chrome_crashpad_helper, which fails with "--database is required"
+  // on some bundled Chromium builds in minimal containers.
+  "--disable-features=CrashReporting,IsolateOrigins,site-per-process",
+  "--disable-breakpad",
+];
+
 export async function listTemplates(): Promise<TemplateMeta[]> {
   const dirs = await fs.readdir(TEMPLATES_DIR);
   const out: TemplateMeta[] = [];
@@ -83,16 +98,7 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--disable-crash-reporter",
-      "--no-zygote",
-      "--font-render-hinting=none",
-    ],
+    args: CHROMIUM_ARGS,
   });
   try {
     const page = await browser.newPage();
@@ -166,15 +172,7 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--disable-crash-reporter",
-      "--no-zygote",
-    ],
+    args: CHROMIUM_ARGS,
   });
   try {
     const page = await browser.newPage();
