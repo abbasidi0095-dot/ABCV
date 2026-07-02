@@ -1,0 +1,9 @@
+{
+  "id": "dark",
+  "name": "Dark",
+  "description": "Sleek dark theme with a bold accent sidebar.",
+  "accentDefault": "#6366f1",
+  "fonts": ["inter", "system-ui", "roboto"],
+  "preview": "preview.png",
+  "accentOptions": ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#38bdf8"]
+}

@@ -3,6 +3,7 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import puppeteer from "puppeteer";
 import { TemplateMetaSchema, type TemplateMeta, type CVContent, CVContentSchema } from "@/lib/schemas";
+import { LEVEL_LABELS, UI_LABELS } from "@/lib/languages";
 
 
 const TEMPLATES_DIR = path.join(process.cwd(), "templates");
@@ -38,6 +39,7 @@ export interface RenderArgs {
   photoBase64?: string | null;
   roleTitle?: string | null;
   content: CVContent;
+  language?: string;
 }
 
 /** Render the template HTML and PDF bytes. */
@@ -57,9 +59,16 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
     .join("")
     .toUpperCase();
 
+  const expCount = args.content.experience.length;
+  const fontScale = expCount <= 3 ? 1 : expCount <= 5 ? 0.86 : 0.76;
+  const lang = args.language ?? "en";
+  const levelLabels = (LEVEL_LABELS as Record<string, { high: string; medium: string }>)[lang] ?? LEVEL_LABELS.en;
+  const uiLabels = (UI_LABELS as Record<string, { languages: string; skills: string; experience: string; contact: string; summary: string }>)[lang] ?? UI_LABELS.en;
+
   const html = tpl({
     accentColor: args.accentColor,
     fontId: args.fontId,
+    fontScale,
     fullName: args.fullName,
     email: args.email,
     phone: args.phone,
@@ -67,6 +76,8 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
     initials,
     roleTitle: args.roleTitle,
     content: args.content,
+    levelLabels,
+    uiLabels,
   });
 
   const browser = await puppeteer.launch({

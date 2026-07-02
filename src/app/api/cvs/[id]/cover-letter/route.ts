@@ -24,15 +24,28 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   // Generate cover letter via LLM.
   const jobParsed = cv.job?.parsedJson as { jobTitle?: string; requiredSkills?: string[]; responsibilities?: string[] } | undefined;
+  const cvContent = cv.contentJson as { summary?: string; experience?: { title?: string; bullets?: string[] }[]; skills?: string[] } | undefined;
+
+  const expHighlights = (cvContent?.experience ?? [])
+    .slice(0, 3)
+    .map((e) => `${e.title ?? "Role"}: ${(e.bullets ?? []).slice(0, 2).join(" | ")}`)
+    .join("\n");
+
   let bodyText: string;
   if (isLlmConfigured() && cv.job && jobParsed) {
     try {
       const userPrompt = `Language: ${language}
+Applicant name: ${cv.fullName}
 Role title: ${jobParsed.jobTitle ?? "unknown"}
 Key skills: ${(jobParsed.requiredSkills ?? []).join(", ")}
 Responsibilities: ${(jobParsed.responsibilities ?? []).join(", ")}
 
-Generate a professional cover letter body for this role. Write ALL content in the specified language. Do NOT mention any specific company name.`;
+Applicant's CV summary: ${cvContent?.summary ?? ""}
+Applicant's CV experience highlights:
+${expHighlights}
+Applicant's skills: ${(cvContent?.skills ?? []).join(", ")}
+
+Generate a professional cover letter body for this role that reflects the applicant's real achievements. Write ALL content in the specified language. Do NOT mention any specific past employer company names.`;
       const result = await llmJson(CoverLetterContentSchema, COVER_LETTER_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 2000 });
       bodyText = result.body;
     } catch (e) {
@@ -104,6 +117,16 @@ I am eager to bring my skills and experience to this role and would welcome the 
 Tout au long de ma carrière, j'ai développé une expertise en développement full-stack, architecture système et collaboration interfonctionnelle. Je suis passionné par la création de produits qui résolvent des problèmes concrets et je m'épanouis dans des environnements dynamiques et innovants.
 
 Je serais ravi de mettre mes compétences et mon expérience au service de ce poste et de discuter de la manière dont je peux contribuer à votre organisation. Merci de votre temps et de votre considération.`,
+    es: `Le escribo para expresar mi interés en el puesto de ${roleTitle}. Con una sólida formación en ingeniería de software y una trayectoria demostrada entregando soluciones impactantes, confío en mi capacidad para contribuir de manera efectiva a su equipo.
+
+A lo largo de mi carrera, he desarrollado experiencia en desarrollo full-stack, arquitectura de sistemas y colaboración interfuncional. Me apasiona crear productos que resuelvan problemas reales y prospero en entornos dinámicos e innovadores.
+
+Estoy deseoso de aportar mis habilidades y experiencia a este puesto y me encantaría tener la oportunidad de conversar sobre cómo puedo agregar valor a su organización. Gracias por su tiempo y consideración.`,
+    de: `Ich schreibe, um mein Interesse an der Position als ${roleTitle} zu bekunden. Mit einem starken Hintergrund in Software Engineering und einer nachweisbaren Erfolgsbilanz bei der Entwicklung wirkungsvoller Lösungen bin ich zuversichtlich, dass ich Ihr Team effektiv unterstützen kann.
+
+Während meiner Karriere habe ich Expertise in Full-Stack-Entwicklung, Systemarchitektur und übergreifender Zusammenarbeit aufgebaut. Ich bin leidenschaftlich daran interessiert, Produkte zu entwickeln, die echte Probleme lösen, und gedeihe in dynamischen, innovativen Umgebungen.
+
+Ich würde mich freuen, meine Fähigkeiten und Erfahrungen in diese Rolle einzubringen und die Gelegenheit zu haben zu besprechen, wie ich Ihrer Organisation Mehrwert bieten kann. Vielen Dank für Ihre Zeit und Ihre Überlegung.`,
   };
   return letters[language] ?? letters.en;
 }

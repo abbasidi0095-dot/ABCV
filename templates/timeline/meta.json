@@ -1,0 +1,9 @@
+{
+  "id": "timeline",
+  "name": "Timeline",
+  "description": "Experience shown as a vertical timeline with a sidebar.",
+  "accentDefault": "#0ea5e9",
+  "fonts": ["inter", "system-ui", "roboto"],
+  "preview": "preview.png",
+  "accentOptions": ["#0ea5e9", "#8b5cf6", "#f43f5e", "#14b8a6", "#f59e0b"]
+}

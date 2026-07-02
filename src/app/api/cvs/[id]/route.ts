@@ -107,6 +107,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       photoBase64: cv.photoBase64,
       roleTitle,
       content,
+      language: cv.language || "en",
     });
   } catch (e) {
     return NextResponse.json({ error: "render_failed", detail: (e as Error).message }, { status: 500 });

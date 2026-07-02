@@ -22,8 +22,11 @@ interface ParsedJob {
 interface ExperienceEntry {
   company: string; title: string; startDate: string; endDate: string; bullets: string[];
 }
+interface LanguageEntry {
+  name: string; level: "high" | "medium";
+}
 interface CVContent {
-  summary: string; experience: ExperienceEntry[]; skills: string[];
+  summary: string; experience: ExperienceEntry[]; skills: string[]; languages?: LanguageEntry[];
 }
 interface CvResponse {
   id: string;
@@ -64,6 +67,7 @@ const NewPageInner = () => {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [language, setLanguage] = useState("en");
+  const [numExperiences, setNumExperiences] = useState(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3/4: edit and style
@@ -167,6 +171,7 @@ const NewPageInner = () => {
       fd.set("email", emailDetail);
       fd.set("phone", phone);
       fd.set("language", language);
+      fd.set("numExperiences", String(numExperiences));
       if (photo) fd.set("photo", photo);
 
       const r = await fetch("/api/cvs", { method: "POST", body: fd });
@@ -421,6 +426,19 @@ const NewPageInner = () => {
                   <option value="fr">Français</option>
                   <option value="es">Español</option>
                   <option value="de">Deutsch</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="num-experiences">{t("new.details.numExperiences")}</Label>
+                <select
+                  id="num-experiences"
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={numExperiences}
+                  onChange={(e) => setNumExperiences(parseInt(e.target.value, 10))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
                 </select>
               </div>
               <div>

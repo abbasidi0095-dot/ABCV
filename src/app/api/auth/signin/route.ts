@@ -48,6 +48,11 @@ function sampleCVContent(name: string): CVContent {
       },
     ],
     skills: ["TypeScript", "React", "Node.js", "PostgreSQL", "GraphQL", "AWS", "Docker", "CI/CD", "Python", "Figma API", "REST APIs", "Agile"],
+    languages: [
+      { name: "English", level: "high" },
+      { name: "French", level: "medium" },
+      { name: "Spanish", level: "medium" },
+    ],
   };
 }
 

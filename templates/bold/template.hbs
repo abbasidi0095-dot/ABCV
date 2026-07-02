@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <style>
   @page { margin: 0; size: A4; }
-  :root { --accent: {{accentColor}}; }
+  :root { --accent: {{accentColor}}; --font-scale: {{fontScale}}; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: 10pt; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: calc(10pt * var(--font-scale)); }
   .page { min-height: 297mm; width: 210mm; padding: 14mm 18mm 10mm; }
   .header { margin-bottom: 20px; border-bottom: 4px solid var(--accent); padding-bottom: 14px; }
   .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
@@ -30,6 +30,11 @@
   .bullets li::before { content: "▸"; color: var(--accent); position: absolute; left: -16px; font-weight: 700; }
   .skills-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
   .skills-grid span { background: #f3f4f6; color: #374151; padding: 3px 12px; border-radius: 20px; font-size: 9pt; border: 1px solid #e5e7eb; }
+  .languages-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .language-item { display: flex; justify-content: space-between; align-items: center; }
+  .lang-level { padding: 2px 7px; border-radius: 999px; font-size: 7.5pt; }
+  .lang-level-high { background: #e5e7eb; color: #111827; }
+  .lang-level-medium { background: #f3f4f6; color: #374151; }
 </style>
 </head>
 <body>
@@ -50,12 +55,12 @@
   </div>
 
   <section class="section">
-    <h3 class="section-title">Summary</h3>
+    <h3 class="section-title">{{uiLabels.summary}}</h3>
     <p class="summary">{{content.summary}}</p>
   </section>
 
   <section class="section">
-    <h3 class="section-title">Experience</h3>
+    <h3 class="section-title">{{uiLabels.experience}}</h3>
     {{#each content.experience}}
     <div class="exp-item">
       <div class="exp-head">
@@ -73,9 +78,16 @@
   </section>
 
   <section class="section">
-    <h3 class="section-title">Skills</h3>
+    <h3 class="section-title">{{uiLabels.skills}}</h3>
     <div class="skills-grid">
       {{#each content.skills}}<span>{{this}}</span>{{/each}}
+    </div>
+  </section>
+
+  <section class="section">
+    <h3 class="section-title">{{uiLabels.languages}}</h3>
+    <div class="skills-grid">
+      {{#each content.languages}}<span>{{this.name}}</span>{{/each}}
     </div>
   </section>
 </div>

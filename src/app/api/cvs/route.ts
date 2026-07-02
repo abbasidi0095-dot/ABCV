@@ -6,6 +6,7 @@ import { CVContentSchema, JobParsedSchema, type CVContent, type JobParsed } from
 import { CV_GENERATE_SYSTEM } from "@/lib/prompts";
 import { validateCVContent } from "@/lib/validator";
 import { processPhoto } from "@/lib/photo";
+import { buildLanguages } from "@/lib/languages";
 
 export async function POST(req: NextRequest) {
   let user;
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
   const email = (form.get("email") as string | null)?.trim();
   const phone = (form.get("phone") as string | null)?.trim();
   const language = (form.get("language") as string | null) ?? "en";
+  const numExperiencesRaw = (form.get("numExperiences") as string | null) ?? "3";
+  const numExperiences = Math.min(8, Math.max(1, parseInt(numExperiencesRaw, 10) || 3));
   const photoFile = form.get("photo") as File | null;
 
   if (!fullName || !email || !phone) {
@@ -50,8 +53,8 @@ export async function POST(req: NextRequest) {
   let content: CVContent;
   if (isLlmConfigured()) {
     try {
-      const userPrompt = `Language: ${language}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object for this applicant tailored to the target role. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
-      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 6000 });
+      const userPrompt = `Language: ${language}\nExperience entries to generate: ${numExperiences}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object with EXACTLY ${numExperiences} experience entries, tailored to the target role. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
+      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 8000 });
     } catch (e) {
       console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);
       content = mockCVContent(fullName);
@@ -59,6 +62,9 @@ export async function POST(req: NextRequest) {
   } else {
     content = mockCVContent(fullName);
   }
+
+  // Add deterministic languages section based on CV output language.
+  content.languages = buildLanguages(language);
 
   // Validate realism (soft — log issues but don't hard-block dev).
   const v = validateCVContent(content);
@@ -132,5 +138,6 @@ function mockCVContent(fullName: string): CVContent {
       },
     ],
     skills: ["TypeScript", "React", "Next.js", "Node.js", "PostgreSQL", "REST APIs", "Jest", "CI/CD", "Docker", "GraphQL", "Figma", "Agile"],
+    languages: buildLanguages("en"),
   };
 }

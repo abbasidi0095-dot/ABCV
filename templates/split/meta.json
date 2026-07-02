@@ -1,0 +1,9 @@
+{
+  "id": "split",
+  "name": "Split",
+  "description": "Clean two-column split with a strong top header.",
+  "accentDefault": "#0f172a",
+  "fonts": ["inter", "system-ui", "roboto"],
+  "preview": "preview.png",
+  "accentOptions": ["#0f172a", "#2563eb", "#7c3aed", "#db2777", "#059669"]
+}

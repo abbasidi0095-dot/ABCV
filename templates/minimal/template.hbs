@@ -4,11 +4,9 @@
 <meta charset="utf-8">
 <style>
   @page { margin: 18mm 22mm; size: A4; }
-  :root {
-    --accent: {{accentColor}};
-  }
+  :root { --accent: {{accentColor}}; --font-scale: {{fontScale}}; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Inter", -apple-system, sans-serif; color: #1f2937; line-height: 1.55; font-size: 10pt; }
+  body { font-family: "Inter", -apple-system, sans-serif; color: #1f2937; line-height: 1.55; font-size: calc(10pt * var(--font-scale)); }
 
   .header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid #e5e7eb; margin-bottom: 22px; }
   .header-left { display: flex; gap: 18px; align-items: center; }
@@ -35,6 +33,11 @@
 
   .skills-wrap { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 9.5pt; color: #374151; }
   .skills-wrap span::before { content: "– "; color: var(--accent); margin-right: 2px; }
+  .languages-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .language-item { display: flex; justify-content: space-between; align-items: center; }
+  .lang-level { padding: 2px 7px; border-radius: 999px; font-size: 7.5pt; }
+  .lang-level-high { background: #e5e7eb; color: #111827; }
+  .lang-level-medium { background: #f3f4f6; color: #374151; }
 </style>
 </head>
 <body>
@@ -58,7 +61,7 @@
 {{/if}}
 
 <section class="section">
-  <h3 class="section-title">Experience</h3>
+  <h3 class="section-title">{{uiLabels.experience}}</h3>
   {{#each content.experience}}
     <div class="exp-item">
       <div class="exp-head">
@@ -77,9 +80,23 @@
 
 {{#if content.skills.length}}
 <section class="section">
-  <h3 class="section-title">Skills</h3>
+  <h3 class="section-title">{{uiLabels.skills}}</h3>
   <div class="skills-wrap">
     {{#each content.skills}}<span>{{this}}</span>{{/each}}
+  </div>
+</section>
+{{/if}}
+
+{{#if content.languages}}
+<section class="section">
+  <h3 class="section-title">{{uiLabels.languages}}</h3>
+  <div class="languages-list">
+    {{#each content.languages}}
+      <div class="language-item">
+        <span>{{this.name}}</span>
+        <span class="lang-level lang-level-{{this.level}}">{{lookup ../levelLabels this.level}}</span>
+      </div>
+    {{/each}}
   </div>
 </section>
 {{/if}}

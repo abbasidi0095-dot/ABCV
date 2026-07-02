@@ -1,0 +1,9 @@
+{
+  "id": "magenta",
+  "name": "Magenta",
+  "description": "Vibrant creative layout with cards and a magenta accent.",
+  "accentDefault": "#d946ef",
+  "fonts": ["inter", "system-ui", "roboto"],
+  "preview": "preview.png",
+  "accentOptions": ["#d946ef", "#8b5cf6", "#f97316", "#06b6d4", "#ec4899"]
+}

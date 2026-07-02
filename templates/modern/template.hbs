@@ -6,9 +6,10 @@
   @page { margin: 0; size: A4; }
   :root {
     --accent: {{accentColor}};
+    --font-scale: {{fontScale}};
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: 10.5pt; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: calc(10.5pt * var(--font-scale)); }
   .page { display: flex; min-height: 297mm; width: 210mm; }
   .sidebar {
     width: 32%;
@@ -81,6 +82,11 @@
   .exp-dates { color: #6b7280; font-size: 9pt; white-space: nowrap; }
   .exp-items { margin-top: 6px; padding-left: 16px; }
   .exp-items li { margin-bottom: 4px; line-height: 1.45; }
+  .languages-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .language-item { display: flex; justify-content: space-between; align-items: center; font-size: 9.5pt; }
+  .lang-level { padding: 2px 8px; border-radius: 999px; font-size: 8pt; }
+  .lang-level-high { background: rgba(255,255,255,0.35); color: #fff; }
+  .lang-level-medium { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); }
 </style>
 </head>
 <body>
@@ -92,18 +98,30 @@
       <div class="photo-placeholder">{{initials}}</div>
     {{/if}}
 
-    <h2>Contact</h2>
+    <h2>{{uiLabels.contact}}</h2>
     <div class="contact-row">
       <span>{{email}}</span>
       <span>{{phone}}</span>
     </div>
 
-    <h2>Skills</h2>
+    <h2>{{uiLabels.skills}}</h2>
     <ul>
       {{#each content.skills}}
         <li>{{this}}</li>
       {{/each}}
     </ul>
+
+    {{#if content.languages}}
+    <h2>{{uiLabels.languages}}</h2>
+    <ul class="languages-list">
+      {{#each content.languages}}
+        <li class="language-item">
+          <span>{{this.name}}</span>
+          <span class="lang-level lang-level-{{this.level}}">{{lookup ../levelLabels this.level}}</span>
+        </li>
+      {{/each}}
+    </ul>
+    {{/if}}
   </aside>
 
   <main class="main">
@@ -111,12 +129,12 @@
     {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
 
     <section>
-      <h3>Summary</h3>
+      <h3>{{uiLabels.summary}}</h3>
       <p class="summary">{{content.summary}}</p>
     </section>
 
     <section>
-      <h3>Experience</h3>
+      <h3>{{uiLabels.experience}}</h3>
       {{#each content.experience}}
         <div class="exp-item">
           <div class="exp-head">

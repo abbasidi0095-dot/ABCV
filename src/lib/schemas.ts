@@ -56,12 +56,20 @@ export const ExperienceEntrySchema = z.object({
   bullets: z.array(z.string().min(1)).min(1).max(6),
 });
 
+/** One spoken language on the CV */
+export const LanguageEntrySchema = z.object({
+  name: z.string().min(1),
+  level: z.enum(["high", "medium"]),
+});
+export type LanguageEntry = z.infer<typeof LanguageEntrySchema>;
+
 /** AI-generated CV content (lives in Cv.contentJson). User-supplied
  *  fullName/email/phone/photo live on the Cv row itself. */
 export const CVContentSchema = z.object({
   summary: z.string().min(20).max(400),
-  experience: z.array(ExperienceEntrySchema).min(1).max(6),
+  experience: z.array(ExperienceEntrySchema).min(1).max(8),
   skills: z.array(z.string()).min(1),
+  languages: z.array(LanguageEntrySchema).default([]),
 });
 export type CVContent = z.infer<typeof CVContentSchema>;
 export type ExperienceEntry = z.infer<typeof ExperienceEntrySchema>;
@@ -74,6 +82,7 @@ export const CreateCvInputSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(5).max(30),
   language: z.string().default("en"),
+  numExperiences: z.coerce.number().int().min(1).max(8).default(3),
 });
 
 /** Generated cover letter content */

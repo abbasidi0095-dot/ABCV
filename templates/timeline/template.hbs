@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; size: A4; }
+  :root { --accent: {{accentColor}}; --font-scale: {{fontScale}}; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; font-size: calc(10pt * var(--font-scale)); }
+  .page { min-height: 297mm; width: 210mm; padding: 14mm 16mm 10mm; }
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--accent); }
+  .photo { width: 80px; height: 107px; object-fit: cover; border-radius: 6px; border: 2px solid var(--accent); }
+  .photo-placeholder { width: 80px; height: 107px; border-radius: 6px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--accent); font-weight: 700; }
+  .name-area h1 { font-size: 26pt; font-weight: 800; letter-spacing: -0.03em; }
+  .name-area .role-line { font-size: 11pt; color: var(--accent); font-weight: 600; }
+  .contact-row { display: flex; gap: 14px; font-size: 9pt; color: #6b7280; margin-top: 4px; }
+  .grid { display: flex; gap: 18px; }
+  .left { flex: 1.5; }
+  .right { width: 120px; }
+  .section-title { font-size: 9pt; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .section-title::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+  .summary { font-size: 10pt; color: #4b5563; margin-bottom: 14px; }
+  .timeline { position: relative; padding-left: 18px; }
+  .timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 2px; background: #e5e7eb; }
+  .exp-item { position: relative; margin-bottom: 12px; }
+  .exp-item::before { content: ""; position: absolute; left: -14px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); }
+  .exp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .exp-title { font-weight: 700; font-size: 10.5pt; }
+  .exp-company { color: var(--accent); font-size: 9.5pt; font-weight: 500; }
+  .exp-dates { color: #9ca3af; font-size: 8.5pt; white-space: nowrap; }
+  .bullets { margin-top: 4px; padding-left: 14px; }
+  .bullets li { margin-bottom: 2px; color: #374151; }
+  .right h3 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .right ul { list-style: none; }
+  .right li { font-size: 9pt; color: #4b5563; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+  .right li:last-child { border-bottom: none; }
+  .languages-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .language-item { display: flex; justify-content: space-between; align-items: center; font-size: 8.5pt; }
+  .lang-level { padding: 1px 6px; border-radius: 999px; font-size: 7.5pt; }
+  .lang-level-high { background: var(--accent); color: #fff; }
+  .lang-level-medium { background: #f3f4f6; color: #374151; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    {{#if photoB64}}<img class="photo" src="{{photoB64}}" alt="" />{{else}}<div class="photo-placeholder">{{initials}}</div>{{/if}}
+    <div class="name-area">
+      <h1>{{fullName}}</h1>
+      {{#if roleTitle}}<div class="role-line">{{roleTitle}}</div>{{/if}}
+      <div class="contact-row">
+        <span>{{email}}</span>
+        <span>{{phone}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="left">
+      <h3 class="section-title">{{uiLabels.summary}}</h3>
+      <p class="summary">{{content.summary}}</p>
+
+      <h3 class="section-title">{{uiLabels.experience}}</h3>
+      <div class="timeline">
+        {{#each content.experience}}
+          <div class="exp-item">
+            <div class="exp-head">
+              <div>
+                <div class="exp-title">{{title}}</div>
+                <div class="exp-company">{{company}}</div>
+              </div>
+              <div class="exp-dates">{{startDate}} — {{endDate}}</div>
+            </div>
+            <ul class="bullets">
+              {{#each bullets}}<li>{{this}}</li>{{/each}}
+            </ul>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="right">
+      <h3>{{uiLabels.skills}}</h3>
+      <ul>
+        {{#each content.skills}}<li>{{this}}</li>{{/each}}
+      </ul>
+
+      {{#if content.languages}}
+      <h3 style="margin-top: 14px;">{{uiLabels.languages}}</h3>
+      <ul class="languages-list">
+        {{#each content.languages}}
+          <li class="language-item">
+            <span>{{this.name}}</span>
+            <span class="lang-level lang-level-{{this.level}}">{{lookup ../levelLabels this.level}}</span>
+          </li>
+        {{/each}}
+      </ul>
+      {{/if}}
+    </div>
+  </div>
+</div>
+</body>
+</html>
