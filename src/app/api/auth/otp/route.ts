@@ -59,9 +59,11 @@ export async function POST(req: NextRequest) {
         subject: "abCV — your verification code",
         html: otpEmailHtml(otp),
       });
-    } catch (e) {
+    } catch (e: any) {
+      const msg = e?.message ?? String(e);
+      console.error("OTP send error:", msg);
       return NextResponse.json(
-        { error: "Failed to send verification email" },
+        { error: "Failed to send verification email", detail: msg },
         { status: 500 }
       );
     }
