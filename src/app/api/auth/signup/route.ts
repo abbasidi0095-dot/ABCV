@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const stack = e?.stack ?? "";
     console.error("Signup error:", msg, stack);
     return NextResponse.json(
-      { error: "Sign-up failed", detail: process.env.NODE_ENV === "development" ? msg : undefined },
+      { error: "Sign-up failed", detail: msg },
       { status: 500 }
     );
   }
