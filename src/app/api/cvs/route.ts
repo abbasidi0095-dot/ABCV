@@ -38,23 +38,31 @@ export async function POST(req: NextRequest) {
     if (!row) return NextResponse.json({ error: "job not found" }, { status: 404 });
     job = JobParsedSchema.parse(row.parsedJson);
   } else if (pastedText) {
-    // Parse on the fly if user pasted raw text without saving a Job row.
-    job = isLlmConfigured()
-      ? await llmJson(JobParsedSchema, "You are a job-description parser.", pastedText.slice(0, 8000), { temperature: 0.2, maxTokens: 1200 })
-      : {
-          jobTitle: "Professional (mock)",
-          company: null, location: null,
-          requiredSkills: ["Communication", "Organization", "Teamwork", "Problem-solving"],
-          responsibilities: ["Deliver on responsibilities", "Collaborate with team"], yearsExperience: 3, keywords: ["professional"],
-        };
+    // When the LLM is configured, skip the separate parse call — the CV
+    // generator infers the role directly from the raw pasted text in one shot.
+    if (!isLlmConfigured()) {
+      job = {
+        jobTitle: "Professional (mock)",
+        company: null, location: null,
+        requiredSkills: ["Communication", "Organization", "Teamwork", "Problem-solving"],
+        responsibilities: ["Deliver on responsibilities", "Collaborate with team"], yearsExperience: 3, keywords: ["professional"],
+      };
+    }
   }
 
   // Generate experience via LLM (falls back to mock data on any failure).
   let content: CVContent;
   if (isLlmConfigured()) {
     try {
-      const userPrompt = `Language: ${language}\nExperience entries to generate: ${numExperiences}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object with EXACTLY ${numExperiences} experience entries, tailored to the target role. Adapt companies, terminology, and achievements to the role's actual industry (NOT software/tech unless the role is a tech role). Companies must be realistic lesser-known/regional/mid-size organizations in that industry; include at most ONE globally well-known brand. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
-      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 8000 });
+      let userPrompt: string;
+      if (job) {
+        // Saved job (jobId path) — structured role JSON available.
+        userPrompt = `Language: ${language}\nExperience entries to generate: ${numExperiences}\nTarget role (JSON):\n${JSON.stringify(job)}\n\nApplicant name: "${fullName}"\n\nGenerate a complete CV content object with EXACTLY ${numExperiences} experience entries, tailored to the target role. Adapt companies, terminology, and achievements to the role's actual industry (NOT software/tech unless the role is a tech role). Companies must be realistic lesser-known/regional/mid-size organizations in that industry; include at most ONE globally well-known brand. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
+      } else {
+        // pastedText path — pass the raw description inline; the model infers the role.
+        userPrompt = `Language: ${language}\nExperience entries to generate: ${numExperiences}\n\nRaw job description:\n${(pastedText ?? "").slice(0, 4000)}\n\nApplicant name: "${fullName}"\n\nInfer the target role, industry, and required skills from the raw job description above. Generate a complete CV content object with EXACTLY ${numExperiences} experience entries, tailored to that role. Adapt companies, terminology, and achievements to the role's actual industry (NOT software/tech unless the role is a tech role). Companies must be realistic lesser-known/regional/mid-size organizations in that industry; include at most ONE globally well-known brand. Set the "targetRole" field to the inferred job title. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
+      }
+      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 2500 });
     } catch (e) {
       console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);
       content = mockCVContent(fullName, job, numExperiences);
@@ -65,6 +73,8 @@ export async function POST(req: NextRequest) {
 
   // Add deterministic languages section based on CV output language.
   content.languages = buildLanguages(language);
+  // Ensure targetRole is set from the saved job if the model didn't populate it.
+  if (!content.targetRole && job?.jobTitle) content.targetRole = job.jobTitle;
 
   // Validate realism (soft — log issues but don't hard-block dev).
   const v = validateCVContent(content);

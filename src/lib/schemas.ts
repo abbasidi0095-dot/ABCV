@@ -70,6 +70,7 @@ export const CVContentSchema = z.object({
   experience: z.array(ExperienceEntrySchema).min(1).max(8),
   skills: z.array(z.string()).min(1),
   languages: z.array(LanguageEntrySchema).default([]),
+  targetRole: z.string().optional(),
 });
 export type CVContent = z.infer<typeof CVContentSchema>;
 export type ExperienceEntry = z.infer<typeof ExperienceEntrySchema>;

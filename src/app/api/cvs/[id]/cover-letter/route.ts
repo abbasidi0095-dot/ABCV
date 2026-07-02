@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   // Generate cover letter via LLM.
   const jobParsed = cv.job?.parsedJson as { jobTitle?: string; requiredSkills?: string[]; responsibilities?: string[] } | undefined;
-  const cvContent = cv.contentJson as { summary?: string; experience?: { title?: string; bullets?: string[] }[]; skills?: string[] } | undefined;
+  const cvContent = cv.contentJson as { summary?: string; experience?: { title?: string; bullets?: string[] }[]; skills?: string[]; targetRole?: string } | undefined;
 
   const expHighlights = (cvContent?.experience ?? [])
     .slice(0, 3)
@@ -50,10 +50,10 @@ Generate a professional cover letter body for this role that reflects the applic
       bodyText = result.body;
     } catch (e) {
       console.warn("LLM cover letter generation failed:", (e as Error).message);
-      bodyText = defaultCoverLetter(language, jobParsed?.jobTitle ?? "the position");
+      bodyText = defaultCoverLetter(language, jobParsed?.jobTitle ?? cvContent?.targetRole ?? "the position");
     }
   } else {
-    bodyText = defaultCoverLetter(language, jobParsed?.jobTitle ?? "the position");
+    bodyText = defaultCoverLetter(language, jobParsed?.jobTitle ?? cvContent?.targetRole ?? "the position");
   }
 
   // Persist.

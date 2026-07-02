@@ -18,7 +18,8 @@ Rules:
 4. Each "bullets" array: exactly 3 bullets (no more). Each bullet: 8-20 words, starts with a role-appropriate action verb (Led, Managed, Coordinated, Improved, Delivered, Implemented, Streamlined, Trained, Achieved, Reduced, Designed, Built, Organized, Supervised), quantifies impact (%, $, users, patients, students, clients). Weave in requiredSkills naturally.
 5. "summary": 1-2 sentences (20-200 chars) positioning the applicant for THIS role in THIS industry.
 6. "skills": 10-12 items from the job's requiredSkills plus a few supporting skills relevant to the industry.
-7. Output ONLY the JSON object. No markdown fences, no commentary, no preamble.`;
+7. If a raw job description is provided instead of a structured role JSON, infer the job title, industry, and required skills from that raw description, then generate the CV accordingly. Set the "targetRole" field to the inferred job title (e.g. "Registered Nurse", "Marketing Manager"). If a structured role JSON is provided, set "targetRole" to its jobTitle.
+8. Output ONLY the JSON object. No markdown fences, no commentary, no preamble.`;
 
 export const COVER_LETTER_SYSTEM = `You are a cover letter writer. Write a professional, persuasive cover letter for a job applicant, tailored to both the target role AND the applicant's own CV.
 
