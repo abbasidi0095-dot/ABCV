@@ -21,8 +21,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
+# Install a recent stable Chrome (sudo-free headless works reliably in containers,
+# unlike the puppeteer-23 default 131 build whose crashpad handler fails to launch).
+RUN npx @puppeteer/browsers install chrome@stable
 # Copy the entire puppeteer Chrome distribution dir (chrome + chrome_crashpad_handler + libs).
 RUN CHROME_BIN=$(find /app/.puppeteer-cache -type f -name chrome -path '*chrome-linux64*' | head -1) && \
+    echo "Using chrome: $CHROME_BIN" && \
     mkdir -p /app/chrome-bin && \
     cp -r "$(dirname "$CHROME_BIN")" /app/chrome-bin/ && \
     chmod +x /app/chrome-bin/chrome-linux64/chrome
