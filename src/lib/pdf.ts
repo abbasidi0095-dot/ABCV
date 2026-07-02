@@ -15,12 +15,8 @@ const CHROMIUM_ARGS = [
   "--disable-dev-shm-usage",
   "--disable-gpu",
   "--disable-software-rasterizer",
-  "--no-zygote",
   "--font-render-hinting=none",
 ];
-
-/** A writable user-data dir so Chromium's crashpad handler gets a valid database path. */
-const USER_DATA_DIR = process.env.PUPPETEER_USER_DATA_DIR || "/tmp/abcv-puppeteer-ud";
 
 export async function listTemplates(): Promise<TemplateMeta[]> {
   const dirs = await fs.readdir(TEMPLATES_DIR);
@@ -97,7 +93,6 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
-    userDataDir: USER_DATA_DIR,
     args: CHROMIUM_ARGS,
   });
   try {
@@ -172,7 +167,6 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
-    userDataDir: USER_DATA_DIR,
     args: CHROMIUM_ARGS,
   });
   try {
