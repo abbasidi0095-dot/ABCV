@@ -21,15 +21,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
-# Install a recent stable Chrome (sudo-free headless works reliably in containers,
-# unlike the puppeteer-23 default 131 build whose crashpad handler fails to launch).
-RUN node -e "const {install,resolveBuildId}=require('@puppeteer/browsers');resolveBuildId('chrome','linux','stable').then(id=>install({browser:'chrome',buildId:id,cacheDir:process.env.PUPPETEER_CACHE_DIR,unpack:true})).then(r=>console.log('installed:',r.executablePath)).catch(e=>{console.error(e);process.exit(1)})"
-# Copy the entire puppeteer Chrome distribution dir (chrome + chrome_crashpad_handler + libs).
-RUN CHROME_BIN=$(find /app/.puppeteer-cache -type f -name chrome -path '*chrome-linux64*' | head -1) && \
-    echo "Using chrome: $CHROME_BIN" && \
+# Download a recent Chrome for Testing stable (the puppeteer-23 default 131
+# build's crashpad handler fails to launch in minimal containers).
+RUN apt-get update && apt-get install -y curl unzip --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
+    URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+      | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).channels.Stable.downloads.chrome['linux64']))") && \
+    echo "Chrome for Testing URL: $URL" && \
     mkdir -p /app/chrome-bin && \
-    cp -r "$(dirname "$CHROME_BIN")" /app/chrome-bin/ && \
-    chmod +x /app/chrome-bin/chrome-linux64/chrome
+    curl -sL "$URL" -o /tmp/chrome.zip && \
+    unzip -q /tmp/chrome.zip -d /app/chrome-bin && rm /tmp/chrome.zip && \
+    chmod +x /app/chrome-bin/chrome-linux64/chrome && \
+    ls /app/chrome-bin/chrome-linux64/
 # Copy complete puppeteer packages from builder's pnpm store (standalone output is incomplete)
 RUN mkdir -p /app/puppeteer-store/.pnpm && \
     for entry in puppeteer@23.11.1 puppeteer-core@23.11.1 @puppeteer+browsers@2.6.1; do \
