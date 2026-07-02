@@ -2,18 +2,34 @@ import OpenAI from "openai";
 import { z, ZodTypeAny } from "zod";
 
 /**
- * LLM client for Google Gemini models via OpenAI-compatible endpoint.
- * Supports a pool of API keys (GEMINI_API_KEYS comma-separated) with automatic
- * rotation on 429/403/5xx. Falls back to a single GEMINI_API_KEY for back-compat.
- * Uses JSON-mode + schema-in-prompt + Zod validation, retrying once per key on
- * parse failure with a stricter redo instruction.
+ * LLM client for any OpenAI-compatible endpoint. Defaults to NVIDIA
+ * (integrate.api.nvidia.com, nvidia/nemotron-ultra-253b-v1); provider/model can
+ * be overridden via LLM_BASE_URL / LLM_MODEL (or the legacy GEMINI_* names for
+ * back-compat with the previous Gemini wiring).
+ *
+ * Supports a pool of API keys (LLM_API_KEYS comma-separated) with automatic
+ * rotation on 429/403/5xx. Uses schema-in-prompt + Zod validation, retrying
+ * once per key on parse failure with a stricter redo instruction. JSON-mode
+ * (response_format) is only sent on endpoints that support it (Gemini);
+ * NVIDIA returns plain text containing valid JSON.
  */
 
-const baseURL = process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai/";
-const model = process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
+const baseURL =
+  process.env.LLM_BASE_URL ||
+  process.env.GEMINI_BASE_URL ||
+  "https://integrate.api.nvidia.com/v1";
+const model =
+  process.env.LLM_MODEL || process.env.GEMINI_MODEL || "nvidia/nemotron-ultra-253b-v1";
+
+/** True when the active provider accepts OpenAI JSON-mode. NVIDIA does not. */
+const PROVIDES_JSON_MODE = /generativelanguage\.googleapis\.com/.test(baseURL);
 
 function parseKeys(): string[] {
-  const raw = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+  const raw =
+    process.env.LLM_API_KEYS ||
+    process.env.GEMINI_API_KEYS ||
+    process.env.GEMINI_API_KEY ||
+    "";
   return raw
     .split(",")
     .map((k) => k.trim())
@@ -71,7 +87,7 @@ export async function llmJson<T extends ZodTypeAny>(
       model,
       temperature: opts?.temperature ?? 0.7,
       max_tokens: opts?.maxTokens ?? 2000,
-      response_format: { type: "json_object" },
+      ...(PROVIDES_JSON_MODE ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: fullSystem + (extra ? `\n\n${extra}` : "") },
         { role: "user", content: userPrompt },
@@ -79,7 +95,7 @@ export async function llmJson<T extends ZodTypeAny>(
     });
     const choice = res.choices[0];
     const finishReason = choice?.finish_reason ?? "(none)";
-    const raw = choice?.message?.content ?? "";
+    let raw = choice?.message?.content ?? "";
     if (process.env.ABCV_LLM_DEBUG === "1") {
       console.warn(`[llm] finish=${finishReason} usage=${JSON.stringify(res.usage)} rawLen=${raw.length}`);
     }
@@ -91,6 +107,9 @@ export async function llmJson<T extends ZodTypeAny>(
     if (!raw.trim()) {
       throw new LlmError(`LLM returned empty content (finish=${finishReason}).`);
     }
+    // NVIDIA / plain-text providers sometimes wrap the JSON in ```json fences.
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) raw = fence[1];
     try {
       return JSON.parse(raw);
     } catch (e) {
