@@ -23,7 +23,7 @@ RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
 # Install a recent stable Chrome (sudo-free headless works reliably in containers,
 # unlike the puppeteer-23 default 131 build whose crashpad handler fails to launch).
-RUN npx -y @puppeteer/browsers install chrome@stable || ./node_modules/.bin/browsers install chrome@stable
+RUN node -e "const {install,resolveBuildId}=require('@puppeteer/browsers');resolveBuildId('chrome','linux','stable').then(id=>install({browser:'chrome',buildId:id,cacheDir:process.env.PUPPETEER_CACHE_DIR,unpack:true})).then(r=>console.log('installed:',r.executablePath)).catch(e=>{console.error(e);process.exit(1)})"
 # Copy the entire puppeteer Chrome distribution dir (chrome + chrome_crashpad_handler + libs).
 RUN CHROME_BIN=$(find /app/.puppeteer-cache -type f -name chrome -path '*chrome-linux64*' | head -1) && \
     echo "Using chrome: $CHROME_BIN" && \
