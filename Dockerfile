@@ -21,10 +21,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
 RUN pnpm build
 RUN cp -r $(find /app/node_modules/.pnpm -path "*/node_modules/.prisma" -type d | head -1) /app/prisma-client-bin
-# Flatten the downloaded puppeteer Chrome to a stable path the runner can use.
-RUN mkdir -p /app/chrome-bin && \
-    cp "$(find /app/.puppeteer-cache -type f -name chrome -path '*chrome-linux64*' | head -1)" /app/chrome-bin/chrome && \
-    chmod +x /app/chrome-bin/chrome
+# Copy the entire puppeteer Chrome distribution dir (chrome + chrome_crashpad_handler + libs).
+RUN CHROME_BIN=$(find /app/.puppeteer-cache -type f -name chrome -path '*chrome-linux64*' | head -1) && \
+    mkdir -p /app/chrome-bin && \
+    cp -r "$(dirname "$CHROME_BIN")" /app/chrome-bin/ && \
+    chmod +x /app/chrome-bin/chrome-linux64/chrome
 # Copy complete puppeteer packages from builder's pnpm store (standalone output is incomplete)
 RUN mkdir -p /app/puppeteer-store/.pnpm && \
     for entry in puppeteer@23.11.1 puppeteer-core@23.11.1 @puppeteer+browsers@2.6.1; do \
@@ -53,8 +54,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 # Use the puppeteer-bundled Chrome (version-matched) instead of Debian chromium,
 # whose crashpad handler fails to launch in minimal containers.
-ENV PUPPETEER_EXECUTABLE_PATH=/app/chrome-bin/chrome
-ENV CHROME_BIN=/app/chrome-bin/chrome
+ENV PUPPETEER_EXECUTABLE_PATH=/app/chrome-bin/chrome-linux64/chrome
+ENV CHROME_BIN=/app/chrome-bin/chrome-linux64/chrome
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
