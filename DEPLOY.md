@@ -2,8 +2,9 @@
 
 ## Prerequisites
 
-- Node.js 20+, pnpm
-- PostgreSQL 17 (managed or self-hosted)
+- Node.js 22+, pnpm 10+ (the project targets pnpm 10, which requires Node 22)
+- PostgreSQL 17+ (managed or self-hosted)
+- AWS credentials with `cognito-idp:*` (or use the default credential chain — `~/.aws/credentials`, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, or an EC2/ECS role). The server signs Cognito IDP calls (signUp/confirmSignUp/initiateAuth) with these.
 - OpenCode Go API key for LLM features (mock mode works without it)
 - A host that can run Puppeteer (`--no-sandbox`) — Render, Fly.io, Railway, or a VM. **Not** Vercel serverless (Puppeteer needs a full Chrome binary).
 
@@ -12,16 +13,17 @@
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `NEXTAUTH_URL` | Yes | Public URL of your deployment; used to build Cognito callback/logout URLs |
-| `NEXTAUTH_SECRET` | Yes | Random string; signs the OAuth `state` cookie (CSRF). Generate with `openssl rand -base64 48` |
-| `COGNITO_REGION` | Yes | AWS region of the User Pool (e.g. `us-east-1`) |
+| `NEXTAUTH_URL` | No | Public URL (reserved; unused by the own-UI flow) |
+| `NEXTAUTH_SECRET` | No | Reserved (kept for back-compat; the own-UI flow doesn't sign state) |
+| `COGNITO_REGION` | Yes | AWS region of the User Pool (e.g. `us-east-1`); also used by the IDP SDK client |
 | `COGNITO_USER_POOL_ID` | Yes | e.g. `us-east-1_XXXXXXXXX` |
-| `COGNITO_CLIENT_ID` | Yes | App client id (confidential client with OAuth code flow) |
-| `COGNITO_CLIENT_SECRET` | Yes | App client secret (generated) |
-| `COGNITO_DOMAIN` | Yes | Hosted UI domain, e.g. `abcv-auth.auth.us-east-1.amazoncognito.com` |
-| `COGNITO_REDIRECT_URI` | Yes | `https://your-app.com/api/auth/callback/cognito` (must match the App Client's callback URL) |
-| `COGNITO_LOGOUT_URI` | Yes | `https://your-app.com/login` (must match the App Client's logout URL) |
+| `COGNITO_CLIENT_ID` | Yes | App client id (confidential client, `USER_PASSWORD_AUTH` enabled) |
+| `COGNITO_CLIENT_SECRET` | Yes | App client secret (used to compute `SECRET_HASH` and revoke tokens) |
+| `COGNITO_DOMAIN` | Yes | Cognito domain, e.g. `abcv-auth.auth.us-east-1.amazoncognito.com` (used for token refresh + revocation) |
+| `COGNITO_REDIRECT_URI` | No | Hosted-UI only (unused by the own-UI flow) |
+| `COGNITO_LOGOUT_URI` | No | Hosted-UI only (unused by the own-UI flow) |
 | `COGNITO_TOKEN_VALIDITY_DAYS` | No | Cookie max-age in days (default `30`, matches Cognito refresh-token validity) |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | (or role) | If not using `~/.aws/credentials` or an instance role. Any valid AWS creds work — the Cognito client-side ops aren't IAM-gated, but the SDK needs creds to sign. |
 | `OPENCODE_GO_API_KEY` | No | Get one at https://opencode.ai/auth; without it the app uses mock data |
 | `OPENCODE_GO_BASE_URL` | No | Default: `https://opencode.ai/zen/go/v1` |
 | `OPENCODE_GO_MODEL` | No | Default: `deepseek-v4-flash` |
@@ -66,6 +68,11 @@ aws cognito-idp create-user-pool-domain --domain abcv-auth --user-pool-id $POOL 
 
 The JWKS URL used to verify ID tokens is
 `https://cognito-idp.<region>.amazonaws.com/<pool-id>/.well-known/jwks.json`.
+
+The own-UI auth flow uses `USER_PASSWORD_AUTH` (enabled via `--explicit-auth-flows
+ALLOW_USER_PASSWORD_AUTH`) with a `SECRET_HASH` = `base64(HMAC_SHA256(clientSecret,
+username + clientId))`, computed server-side. The Hosted-UI callback/logout URLs
+in step 2 are only needed if you later add a Hosted-UI branch.
 
 ## 2. Database
 
@@ -142,7 +149,7 @@ curl https://your-app.com/api/templates
 
 ## 6. Production considerations
 
-- **Auth**: AWS Cognito Hosted UI handles sign-up, sign-in, email verification, and password reset out of the box. The app stores Cognito ID/Access/Refresh tokens in httpOnly cookies and verifies the ID token (RS256) against the Cognito JWKS on every protected request. For social login, attach a Google/etc. identity provider to the User Pool; for production rate-limiting, front the app with CloudFront + WAF.
+- **Auth**: AWS Cognito backs the full lifecycle. The app uses its **own** styled UI (no Hosted UI) driving the Cognito IDP APIs server-side: `signUp` (creates an UNCONFIRMED user; Cognito emails a 6-digit code) → `confirmSignUp` (validates the code) → `initiateAuth` (`USER_PASSWORD_AUTH` + `SECRET_HASH`) → Cognito ID/Access/Refresh tokens stored in httpOnly cookies, verified (RS256) against the Cognito JWKS on every protected request. Sign-out revokes the refresh token. For social login, add a Hosted-UI branch; for production rate-limiting, front the app with CloudFront + WAF.
 - **Puppeteer**: Runs headless Chrome per request (~150-300ms cold start). For high throughput, consider a persistent browser pool or an external PDF service.
 - **LLM cost**: Each CV generation costs ~1,500 tokens. The DeepSeek V4 Flash model via OpenCode Go is ~$0.15/1M tokens — roughly $0.002 per CV.
 - **Scaling**: The app is stateless (everything in Postgres). Scale horizontally behind a load balancer.

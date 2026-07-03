@@ -29,7 +29,7 @@ several customizable Handlebars/CSS templates.
 | Frontend | Next.js (App Router) + Tailwind v4 + shadcn/ui |
 | Backend | Next.js route handlers (in-process) |
 | DB | Postgres + Prisma + docker-compose for local dev |
-| Auth | AWS Cognito (Hosted UI, OAuth authorization-code flow) |
+| Auth | AWS Cognito (own UI driving IDP APIs: signUp / confirmSignUp / signIn) |
 | LLM | DeepSeek V4 Flash via OpenCode Go (`https://opencode.ai/zen/go/v1`) |
 | Scraping | `fetch` first, Playwright (Chromium) fallback |
 | Photo | `sharp` server-side (3:4 crop, <200KB, stored as base64 in DB) |
@@ -69,10 +69,12 @@ Chrome build to `~/.cache/puppeteer`.
 
 ## User flow
 
-1. **Sign in** at `/login` — "Continue" redirects to the AWS Cognito Hosted UI,
-   where you sign up / sign in / reset your password. On success Cognito sends
-   you back to `/api/auth/callback/cognito`, which exchanges the authorization
-   code for tokens, sets httpOnly cookies, and upserts a local `User` row.
+1. **Sign in / sign up** at `/login` — the app's own styled UI. Enter your email,
+   pick **Sign in** or **Create account**. Creating an account emails a 6-digit
+   confirmation code (sent by Cognito); enter it to confirm, then you're signed
+   in. Existing users sign in with email + password. On success, httpOnly
+   cookies (Cognito ID/Access/Refresh tokens) are set and a local `User` row is
+   upserted.
 2. **Dashboard** (`/dashboard`) lists your saved CVs and links to create new ones.
 3. **New CV wizard** (`/new`):
    - **Job** — paste a URL (we scrape it) or paste the raw posting text.
@@ -101,7 +103,8 @@ abcv/
     ├── lib/
     │   ├── db.ts               Prisma client singleton
 │   ├── cognito-shared.ts   edge-safe Cognito config + JWKS verification (used by middleware)
-│   ├── cognito.ts          Cognito Hosted UI helpers: authorize URL, token exchange, refresh, cookies
+│   ├── cognito.ts          Cognito cookie/token helpers: refresh, setAuthCookies, verifyUserFromCookie
+│   ├── cognito-idp.ts      Cognito IDP client: signUp / confirmSignUp / resendCode / initiateAuth / revoke
 │   ├── session.ts          getCurrentUser / requireUser (Cognito ID token -> Prisma User)
     │   ├── schemas.ts          Zod schemas shared between API + UI
     │   ├── llm.ts              DeepSeek V4 Flash client (JSON mode + retry)
@@ -172,9 +175,11 @@ pnpm db:studio    # prisma studio
   Puppeteer well — when moving to deploy, keep the API on a long-running host
   (Render / Fly.io / a small VM) or swap Puppeteer for an external HTML→PDF
   service.
-- **Auth:** AWS Cognito Hosted UI handles sign-up / sign-in / email verification
-  / password reset. To add social login, attach a Google (etc.) identity provider
-  to the User Pool and the Hosted UI picks it up automatically. Rate-limit at the
-  edge (CloudFront/WAF) for production.
+- **Auth:** AWS Cognito backs sign-up / sign-in / email verification / password
+  reset. The app uses its **own** styled UI (no Hosted UI) driving the Cognito
+  IDP APIs directly (`signUp`, `confirmSignUp`, `resendCode`, `initiateAuth`
+  with `USER_PASSWORD_AUTH` + `SECRET_HASH`). To add social login, attach a
+  Google (etc.) identity provider to the User Pool and add a Hosted-UI branch.
+  Rate-limit at the edge (CloudFront/WAF) for production.
 - **Photos:** stored as base64 in the `Cv.photoBase64` column (<200KB JPEG). No
   filesystem dependency — works out of the box in any deployment environment.

@@ -38,10 +38,8 @@ export function SiteHeader() {
   }, []);
 
   const handleSignOut = async () => {
-    const res = await fetch("/api/auth/session", { method: "DELETE" });
-    const data = await res.json().catch(() => ({}));
-    // If Cognito gave us an end-session URL, go there to clear the IdP session too.
-    window.location.href = data?.logoutUrl ?? "/";
+    await fetch("/api/auth/session", { method: "DELETE" });
+    window.location.href = "/";
   };
 
   return (

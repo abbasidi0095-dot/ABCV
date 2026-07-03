@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  buildLogoutUrl,
   clearAuthCookies,
   readIdToken,
   readRefreshToken,
@@ -8,6 +7,7 @@ import {
   setAuthCookies,
   verifyIdToken,
 } from "@/lib/cognito";
+import { revokeRefreshToken } from "@/lib/cognito-idp";
 
 export async function GET() {
   const idToken = await readIdToken();
@@ -16,7 +16,7 @@ export async function GET() {
     try {
       const u = await verifyIdToken(idToken);
       return NextResponse.json({ user: { id: u.sub, email: u.email, name: u.name ?? null } });
-    } catch (err) {
+    } catch {
       // ID token invalid/expired — try a silent refresh before giving up.
       const refreshToken = await readRefreshToken();
       if (refreshToken) {
@@ -30,7 +30,6 @@ export async function GET() {
           // fall through to unauthenticated
         }
       }
-      void err;
     }
   }
 
@@ -38,17 +37,17 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  const idToken = await readIdToken();
+  const refreshToken = await readRefreshToken();
   await clearAuthCookies();
 
-  // Hand off to Cognito's end-session endpoint so the IdP session is also ended.
-  if (idToken) {
+  // Best-effort: revoke the Cognito refresh token so it can't mint new ID tokens.
+  if (refreshToken) {
     try {
-      return NextResponse.json({ ok: true, logoutUrl: buildLogoutUrl(idToken) });
-    } catch {
-      // fall through
+      await revokeRefreshToken(refreshToken);
+    } catch (e) {
+      console.warn("Token revocation failed:", e instanceof Error ? e.message : e);
     }
   }
 
-  return NextResponse.json({ ok: true, logoutUrl: null });
+  return NextResponse.json({ ok: true });
 }

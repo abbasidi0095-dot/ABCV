@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import type { User } from "@prisma/client";
 import {
   readIdToken,
   readRefreshToken,
@@ -31,6 +32,41 @@ async function resolveCognitoUser(): Promise<CognitoUser | null> {
   }
 }
 
+/**
+ * Create/refresh the local shadow User row for a verified Cognito identity.
+ * Used by the sign-in route (where it signals "new user" for the welcome email)
+ * and by getCurrentUser (when a valid session exists but the row is missing).
+ */
+export async function ensureLocalUser(cu: CognitoUser): Promise<{ user: User; isNew: boolean }> {
+  const name = cu.name ?? cu.email.split("@")[0];
+
+  const existing = await prisma.user.findUnique({ where: { cognitoSub: cu.sub } });
+  if (existing) {
+    if (existing.email !== cu.email || existing.name !== name) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { email: cu.email, name },
+      });
+    }
+    return { user: existing, isNew: false };
+  }
+
+  // A legacy (password-based) row on the same email — link it to the Cognito sub.
+  const byEmail = await prisma.user.findUnique({ where: { email: cu.email } });
+  if (byEmail) {
+    const user = await prisma.user.update({
+      where: { id: byEmail.id },
+      data: { cognitoSub: cu.sub, name, hashedPassword: null },
+    });
+    return { user, isNew: false };
+  }
+
+  const user = await prisma.user.create({
+    data: { email: cu.email, name, cognitoSub: cu.sub },
+  });
+  return { user, isNew: true };
+}
+
 async function getSessionUser(): Promise<CognitoUser | null> {
   try {
     return await resolveCognitoUser();
@@ -44,21 +80,8 @@ export async function getCurrentUser() {
   if (!session) return null;
 
   try {
-    const existing = await prisma.user.findUnique({ where: { cognitoSub: session.sub } });
-    if (existing) return existing;
-
-    // Shadow row missing (e.g. deleted while session still valid) — recreate it.
-    const name = session.name ?? session.email.split("@")[0];
-    const byEmail = await prisma.user.findUnique({ where: { email: session.email } });
-    if (byEmail) {
-      return prisma.user.update({
-        where: { id: byEmail.id },
-        data: { cognitoSub: session.sub, name, hashedPassword: null },
-      });
-    }
-    return prisma.user.create({
-      data: { email: session.email, name, cognitoSub: session.sub },
-    });
+    const { user } = await ensureLocalUser(session);
+    return user;
   } catch {
     // DB unavailable — auth is valid but we can't back it with a User row.
     return null;
