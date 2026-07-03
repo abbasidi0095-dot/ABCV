@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         // pastedText path — pass the raw description inline; the model infers the role.
         userPrompt = `Language: ${language}\nExperience entries to generate: ${numExperiences}\n\nRaw job description:\n${(pastedText ?? "").slice(0, 4000)}\n\nApplicant name: "${fullName}"\n\nInfer the target role, industry, and required skills from the raw job description above. Generate a complete CV content object with EXACTLY ${numExperiences} experience entries, tailored to that role. Adapt companies, terminology, and achievements to the role's actual industry (NOT software/tech unless the role is a tech role). Companies must be realistic lesser-known/regional/mid-size organizations in that industry; include at most ONE globally well-known brand. Set the "targetRole" field to the inferred job title. Write ALL textual content (summary, bullets, skills) in the specified language — BUT dates must ALWAYS be English month abbreviations (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) followed by a year, e.g. "Mar 2021".`;
       }
-      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 2500 });
+      content = await llmJson(CVContentSchema, CV_GENERATE_SYSTEM, userPrompt, { temperature: 0.7, maxTokens: 4000 });
     } catch (e) {
       console.warn("LLM CV generation failed, falling back to mock:", (e as Error).message);
       content = mockCVContent(fullName, job, numExperiences);

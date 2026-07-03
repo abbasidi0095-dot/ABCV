@@ -39,7 +39,7 @@ function getConfig(): { baseURL: string; model: string } {
     const host = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`;
     return {
       baseURL: `https://${host}/v1beta1/projects/${project}/locations/${location}/endpoints/openapi`,
-      model: process.env.LLM_MODEL || "google/gemini-2.5-flash",
+      model: process.env.LLM_MODEL || "google/gemini-2.5-flash-lite",
     };
   }
   return {

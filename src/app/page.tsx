@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -57,7 +57,7 @@ export default function Home() {
         // Hero entrance timeline
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
         tl.from(".hero-badge", { y: 12, opacity: 0, duration: 0.4 })
-          .from(".hero-char", { y: 30, opacity: 0, duration: 0.5, stagger: 0.015 }, "-=0.2")
+          .from(".hero-word", { y: 30, opacity: 0, duration: 0.5, stagger: 0.04 }, "-=0.2")
           .from(".hero-sub", { y: 20, opacity: 0, duration: 0.4 }, "-=0.3")
           .from(".hero-cta", { y: 16, opacity: 0, duration: 0.35, stagger: 0.08 }, "-=0.25")
           .from(".hero-badge-row > *", { y: 10, opacity: 0, duration: 0.3, stagger: 0.05 }, "-=0.2");
@@ -87,9 +87,9 @@ export default function Home() {
     return () => cleanup();
   }, []);
 
-  // Hero char split helper
+  // Hero word split (word-level spans so the headline wraps naturally and stays inline)
   const heroTitle = "Paste a job. Get a tailored CV. In seconds.";
-  const heroChars = heroTitle.split("");
+  const heroWords = heroTitle.split(" ");
 
   return (
     <div ref={rootRef} className="overflow-x-hidden">
@@ -109,10 +109,13 @@ export default function Home() {
             style={{ fontSize: "clamp(2.25rem, 7vw, 4rem)", lineHeight: 1.1 }}
             aria-label={heroTitle}
           >
-            {heroChars.map((ch, i) => (
-              <span key={i} className="hero-char inline-block" aria-hidden="true">
-                {ch === " " ? "\u00A0" : ch}
-              </span>
+            {heroWords.map((word, i) => (
+              <Fragment key={i}>
+                <span className="hero-word inline-block" aria-hidden="true">
+                  {word}
+                </span>
+                {i < heroWords.length - 1 ? " " : null}
+              </Fragment>
             ))}
           </h1>
           <p className="hero-sub mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
