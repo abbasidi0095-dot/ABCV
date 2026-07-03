@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
+import { AuthForm } from "@/components/auth-form";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Palette,
   ImageIcon,
@@ -123,17 +125,37 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {authed ? (
-              <Button asChild size="lg" className="hero-cta rounded-full px-8">
-                <Link href="/dashboard">{t("home.hero.dashboard")}</Link>
-              </Button>
-            ) : (
               <>
                 <Button asChild size="lg" className="hero-cta rounded-full px-8">
-                  <Link href="/login">{t("home.hero.signin")}</Link>
+                  <Link href="/new">{t("home.hero.create")}</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="hero-cta rounded-full px-8">
-                  <Link href="/new">{t("home.hero.try")}</Link>
+                  <Link href="/dashboard">{t("home.hero.dashboard")}</Link>
                 </Button>
+              </>
+            ) : (
+              <>
+                <Dialog>
+                  <DialogTrigger render={<Button size="lg" className="hero-cta rounded-full px-8">{t("home.hero.create")}</Button>} />
+                  <DialogContent className="sm:max-w-[425px] border-none p-0 bg-transparent shadow-none" showCloseButton={false}>
+                    <DialogTitle className="sr-only">Sign In or Create Account</DialogTitle>
+                    <DialogDescription className="sr-only">Authenticate to create a CV</DialogDescription>
+                    <div className="bg-card w-full rounded-2xl border-border/60 p-6 sm:p-8 relative">
+                      <AuthForm onSuccessRedirect="/new" />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                
+                <Dialog>
+                  <DialogTrigger render={<Button size="lg" variant="outline" className="hero-cta rounded-full px-8">{t("home.hero.signin")}</Button>} />
+                  <DialogContent className="sm:max-w-[425px] border-none p-0 bg-transparent shadow-none" showCloseButton={false}>
+                    <DialogTitle className="sr-only">Sign In</DialogTitle>
+                    <DialogDescription className="sr-only">Sign in to your account</DialogDescription>
+                    <div className="bg-card w-full rounded-2xl border-border/60 p-6 sm:p-8 relative">
+                      <AuthForm onSuccessRedirect="/dashboard" />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </>
             )}
           </div>
@@ -228,20 +250,37 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {authed ? (
-              <Button asChild size="lg" className="rounded-full px-8">
-                <Link href="/dashboard">{t("home.cta.dashboard")}</Link>
-              </Button>
-            ) : (
               <>
                 <Button asChild size="lg" className="rounded-full px-8">
-                  <Link href="/login">{t("home.cta.start")}</Link>
+                  <Link href="/new">{t("home.hero.create")}</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full px-8">
-                  <Link href="/new">
-                    {t("home.cta.try")}
-                    <ArrowRight className="ml-1 size-4" />
-                  </Link>
+                  <Link href="/dashboard">{t("home.cta.dashboard")}</Link>
                 </Button>
+              </>
+            ) : (
+              <>
+                <Dialog>
+                  <DialogTrigger render={<Button size="lg" className="rounded-full px-8">{t("home.hero.create")}</Button>} />
+                  <DialogContent className="sm:max-w-[425px] border-none p-0 bg-transparent shadow-none" showCloseButton={false}>
+                    <DialogTitle className="sr-only">Sign In or Create Account</DialogTitle>
+                    <DialogDescription className="sr-only">Authenticate to create a CV</DialogDescription>
+                    <div className="bg-card w-full rounded-2xl border-border/60 p-6 sm:p-8 relative">
+                      <AuthForm onSuccessRedirect="/new" />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger render={<Button size="lg" variant="outline" className="rounded-full px-8">{t("home.hero.signin")}</Button>} />
+                  <DialogContent className="sm:max-w-[425px] border-none p-0 bg-transparent shadow-none" showCloseButton={false}>
+                    <DialogTitle className="sr-only">Sign In</DialogTitle>
+                    <DialogDescription className="sr-only">Sign in to your account</DialogDescription>
+                    <div className="bg-card w-full rounded-2xl border-border/60 p-6 sm:p-8 relative">
+                      <AuthForm onSuccessRedirect="/dashboard" />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </>
             )}
           </div>
