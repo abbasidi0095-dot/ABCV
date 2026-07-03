@@ -29,7 +29,7 @@ several customizable Handlebars/CSS templates.
 | Frontend | Next.js (App Router) + Tailwind v4 + shadcn/ui |
 | Backend | Next.js route handlers (in-process) |
 | DB | Postgres + Prisma + docker-compose for local dev |
-| Auth | NextAuth v4 Credentials provider |
+| Auth | AWS Cognito (Hosted UI, OAuth authorization-code flow) |
 | LLM | DeepSeek V4 Flash via OpenCode Go (`https://opencode.ai/zen/go/v1`) |
 | Scraping | `fetch` first, Playwright (Chromium) fallback |
 | Photo | `sharp` server-side (3:4 crop, <200KB, stored as base64 in DB) |
@@ -69,8 +69,10 @@ Chrome build to `~/.cache/puppeteer`.
 
 ## User flow
 
-1. **Sign in** at `/login` — entering any email + password auto-creates an
-   account (lock this down before production).
+1. **Sign in** at `/login` — "Continue" redirects to the AWS Cognito Hosted UI,
+   where you sign up / sign in / reset your password. On success Cognito sends
+   you back to `/api/auth/callback/cognito`, which exchanges the authorization
+   code for tokens, sets httpOnly cookies, and upserts a local `User` row.
 2. **Dashboard** (`/dashboard`) lists your saved CVs and links to create new ones.
 3. **New CV wizard** (`/new`):
    - **Job** — paste a URL (we scrape it) or paste the raw posting text.
@@ -98,8 +100,9 @@ abcv/
 └── src/
     ├── lib/
     │   ├── db.ts               Prisma client singleton
-    │   ├── auth.ts             NextAuth options (Credentials)
-    │   ├── session.ts          getCurrentUser / requireUser helpers
+│   ├── cognito-shared.ts   edge-safe Cognito config + JWKS verification (used by middleware)
+│   ├── cognito.ts          Cognito Hosted UI helpers: authorize URL, token exchange, refresh, cookies
+│   ├── session.ts          getCurrentUser / requireUser (Cognito ID token -> Prisma User)
     │   ├── schemas.ts          Zod schemas shared between API + UI
     │   ├── llm.ts              DeepSeek V4 Flash client (JSON mode + retry)
     │   ├── scrape.ts            httpx + Playwright fetcher
@@ -169,7 +172,9 @@ pnpm db:studio    # prisma studio
   Puppeteer well — when moving to deploy, keep the API on a long-running host
   (Render / Fly.io / a small VM) or swap Puppeteer for an external HTML→PDF
   service.
-- **Auth:** email + password auto-create is a dev convenience. Add OAuth
-  providers, email verification, and rate limiting before going public.
+- **Auth:** AWS Cognito Hosted UI handles sign-up / sign-in / email verification
+  / password reset. To add social login, attach a Google (etc.) identity provider
+  to the User Pool and the Hosted UI picks it up automatically. Rate-limit at the
+  edge (CloudFront/WAF) for production.
 - **Photos:** stored as base64 in the `Cv.photoBase64` column (<200KB JPEG). No
   filesystem dependency — works out of the box in any deployment environment.

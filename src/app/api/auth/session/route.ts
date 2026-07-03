@@ -1,27 +1,54 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-
-const SESSION_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "fallback-secret-change-me");
-const SESSION_COOKIE = "abcv_session";
-
-export async function DELETE() {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
-  return NextResponse.json({ ok: true });
-}
+import {
+  buildLogoutUrl,
+  clearAuthCookies,
+  readIdToken,
+  readRefreshToken,
+  refreshTokens,
+  setAuthCookies,
+  verifyIdToken,
+} from "@/lib/cognito";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return NextResponse.json({ user: null });
+  const idToken = await readIdToken();
 
-  try {
-    const { payload } = await jwtVerify(token, SESSION_SECRET);
-    return NextResponse.json({
-      user: { id: payload.sub, email: payload.email, name: payload.name },
-    });
-  } catch {
-    return NextResponse.json({ user: null });
+  if (idToken) {
+    try {
+      const u = await verifyIdToken(idToken);
+      return NextResponse.json({ user: { id: u.sub, email: u.email, name: u.name ?? null } });
+    } catch (err) {
+      // ID token invalid/expired — try a silent refresh before giving up.
+      const refreshToken = await readRefreshToken();
+      if (refreshToken) {
+        try {
+          const tokens = await refreshTokens(refreshToken);
+          await verifyIdToken(tokens.id_token);
+          await setAuthCookies(tokens);
+          const u = await verifyIdToken(tokens.id_token);
+          return NextResponse.json({ user: { id: u.sub, email: u.email, name: u.name ?? null } });
+        } catch {
+          // fall through to unauthenticated
+        }
+      }
+      void err;
+    }
   }
+
+  return NextResponse.json({ user: null });
+}
+
+export async function DELETE() {
+  const idToken = await readIdToken();
+  await clearAuthCookies();
+
+  // Hand off to Cognito's end-session endpoint so the IdP session is also ended.
+  if (idToken) {
+    try {
+      return NextResponse.json({ ok: true, logoutUrl: buildLogoutUrl(idToken) });
+    } catch {
+      // fall through
+    }
+  }
+
+  return NextResponse.json({ ok: true, logoutUrl: null });
 }
