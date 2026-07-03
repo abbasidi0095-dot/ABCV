@@ -92,7 +92,7 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: CHROMIUM_ARGS,
   });
   try {
@@ -166,7 +166,7 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: CHROMIUM_ARGS,
   });
   try {

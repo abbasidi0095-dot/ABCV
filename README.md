@@ -2,7 +2,7 @@
 
 Paste a job link (or paste the job text), give us your name, email, phone, and a
 photo, then download a beautifully formatted PDF résumé tailored to that role.
-abCV reads the posting with the free DeepSeek V4 Flash model (via OpenCode Go),
+abCV reads the posting with Google Vertex AI (Gemini 2.5 Flash),
 generates realistic job-specific experience, and renders it through one of
 several customizable Handlebars/CSS templates.
 
@@ -15,10 +15,10 @@ several customizable Handlebars/CSS templates.
 ## Architecture
 
 ```
-[Job URL or pasted text] ─▶ /api/jobs   (httpx + Playwright fallback) ─▶ DeepSeek (JSON mode) ─▶ parsed job JSON
+[Job URL or pasted text] ─▶ /api/jobs   (httpx + Playwright fallback) ─▶ Gemini (JSON) ─▶ parsed job JSON
 [Photo + name/email/phone] ┘                                                                                       │
                                                                                                                    ▼
-                                                                         /api/cvs  ─▶ DeepSeek (JSON mode + realism validator) ─▶ stored CV row
+                                                                         /api/cvs  ─▶ Gemini (JSON + realism validator) ─▶ stored CV row
                                                                                                                    │
                                                                                                                    ▼
                                                                   /api/cvs/[id]/render  ─▶ Handlebars + Puppeteer ─▶ A4 PDF
@@ -30,7 +30,7 @@ several customizable Handlebars/CSS templates.
 | Backend | Next.js route handlers (in-process) |
 | DB | Postgres + Prisma + docker-compose for local dev |
 | Auth | AWS Cognito (own UI driving IDP APIs: signUp / confirmSignUp / signIn) |
-| LLM | DeepSeek V4 Flash via OpenCode Go (`https://opencode.ai/zen/go/v1`) |
+| LLM | Google Vertex AI — Gemini 2.5 Flash (OpenAI-compatible endpoint, OAuth from a service account). Any OpenAI-compatible endpoint also supported (`LLM_PROVIDER=openai`). |
 | Scraping | `fetch` first, Playwright (Chromium) fallback |
 | Photo | `sharp` server-side (3:4 crop, <200KB, stored as base64 in DB) |
 | PDF | Puppeteer + Handlebars templates |
@@ -51,10 +51,11 @@ cp .env.example .env.local
 cp .env.local .env          # Prisma reads .env, Next reads .env.local
 pnpm prisma migrate deploy  # or: pnpm db:migrate
 
-# 4. Add your OpenCode Go API key to .env.local
-#    Get one at https://opencode.ai/auth
-#    Without it, /api/jobs and /api/cvs return a mock job/CV so you can still
-#    exercise the rest of the pipeline (scrape → render → PDF).
+# 4. Configure an LLM in .env.local (see .env.example)
+#    Default: Google Vertex AI (Gemini) — set LLM_PROVIDER=vertex,
+#    GOOGLE_CLOUD_PROJECT, and GOOGLE_APPLICATION_CREDENTIALS (service-account
+#    key path). Or LLM_PROVIDER=openai + LLM_API_KEYS for any OpenAI-compatible
+#    endpoint. Without an LLM, /api/jobs and /api/cvs return mock data.
 
 # 5. Run the dev server
 pnpm dev
@@ -107,7 +108,7 @@ abcv/
 │   ├── cognito-idp.ts      Cognito IDP client: signUp / confirmSignUp / resendCode / initiateAuth / revoke
 │   ├── session.ts          getCurrentUser / requireUser (Cognito ID token -> Prisma User)
     │   ├── schemas.ts          Zod schemas shared between API + UI
-    │   ├── llm.ts              DeepSeek V4 Flash client (JSON mode + retry)
+    │   ├── llm.ts              LLM client (Vertex Gemini or OpenAI-compatible; JSON + Zod + retry)
     │   ├── scrape.ts            httpx + Playwright fetcher
     │   ├── photo.ts            sharp pipeline + base64 embedding
     │   ├── prompts.ts          System prompts for both LLM calls
@@ -168,7 +169,7 @@ pnpm db:studio    # prisma studio
 
 - **Scraping reliability on arbitrary URLs:** bot detection and JS-heavy sites
   can fail — the wizard always allows the "paste raw text" fallback.
-- **DeepSeek V4 Flash JSON mode:** occasionally drifts from the schema; the
+- **Gemini JSON output:** occasionally drifts from the schema; the
   generator retries once with the failed-validation feedback embedded in the
   prompt. If it fails twice, the route returns `parse_failed`/`generate_failed`.
 - **Puppeteer in production serverless:** Vercel/Fly.io edge doesn't run

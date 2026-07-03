@@ -5,8 +5,8 @@
 - Node.js 22+, pnpm 10+ (the project targets pnpm 10, which requires Node 22)
 - PostgreSQL 17+ (managed or self-hosted)
 - AWS credentials with `cognito-idp:*` (or use the default credential chain — `~/.aws/credentials`, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, or an EC2/ECS role). The server signs Cognito IDP calls (signUp/confirmSignUp/initiateAuth) with these.
-- OpenCode Go API key for LLM features (mock mode works without it)
-- A host that can run Puppeteer (`--no-sandbox`) — Render, Fly.io, Railway, or a VM. **Not** Vercel serverless (Puppeteer needs a full Chrome binary).
+- An LLM provider: either Google Vertex AI (a service-account key with the Gemini API enabled — set `GOOGLE_APPLICATION_CREDENTIALS` + `GOOGLE_CLOUD_PROJECT`) OR any OpenAI-compatible endpoint with a static key (`LLM_PROVIDER="openai"` + `LLM_API_KEYS`). Without one, `/api/jobs` and `/api/cvs` return mock data.
+- A host that can run Puppeteer (`--no-sandbox`) — Render, Fly.io, Railway, or a VM. **Not** Vercel serverless (Puppeteer needs a full Chrome binary). Puppeteer's bundled Chrome is used by default; set `PUPPETEER_EXECUTABLE_PATH` to override (e.g. `/usr/bin/chromium` in slim containers).
 
 ## 1. Environment variables
 
@@ -24,9 +24,15 @@
 | `COGNITO_LOGOUT_URI` | No | Hosted-UI only (unused by the own-UI flow) |
 | `COGNITO_TOKEN_VALIDITY_DAYS` | No | Cookie max-age in days (default `30`, matches Cognito refresh-token validity) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | (or role) | If not using `~/.aws/credentials` or an instance role. Any valid AWS creds work — the Cognito client-side ops aren't IAM-gated, but the SDK needs creds to sign. |
-| `OPENCODE_GO_API_KEY` | No | Get one at https://opencode.ai/auth; without it the app uses mock data |
-| `OPENCODE_GO_BASE_URL` | No | Default: `https://opencode.ai/zen/go/v1` |
-| `OPENCODE_GO_MODEL` | No | Default: `deepseek-v4-flash` |
+| `LLM_PROVIDER` | Yes | `vertex` (Google Vertex AI Gemini) or `openai` (any OpenAI-compatible endpoint) |
+| `LLM_MODEL` | Yes | For `vertex`: `google/gemini-2.5-flash` (the `google/` prefix is required). For `openai`: e.g. `nvidia/llama-3.3-nemotron-super-49b-v1` |
+| `GOOGLE_CLOUD_PROJECT` | vertex | GCP project id (e.g. `my-project`) |
+| `VERTEX_LOCATION` | vertex | Vertex location (default `global`) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | vertex | Path to a GCP service-account JSON key with Gemini API access |
+| `LLM_BASE_URL` | openai | OpenAI-compatible base URL (default: NVIDIA `https://integrate.api.nvidia.com/v1`) |
+| `LLM_API_KEYS` | openai | Comma-separated API keys (rotated on 429/403/5xx) |
+| `PUPPETEER_EXECUTABLE_PATH` | No | Override Chrome path; defaults to Puppeteer's bundled Chrome |
+| `OPENCODE_GO_API_KEY` | (legacy) | Unused — kept for back-compat; use `LLM_*` instead |
 | `RESEND_API_KEY` | No | Transactional email (welcome CV email). Without it, the welcome email is skipped |
 
 Photos are stored as base64 in the database — no file storage or S3 needed.
