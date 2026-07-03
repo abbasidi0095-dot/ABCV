@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const phone = (form.get("phone") as string | null)?.trim();
   const language = (form.get("language") as string | null) ?? "en";
   const numExperiencesRaw = (form.get("numExperiences") as string | null) ?? "3";
-  const numExperiences = Math.min(8, Math.max(1, parseInt(numExperiencesRaw, 10) || 3));
+  const numExperiences = Math.min(4, Math.max(1, parseInt(numExperiencesRaw, 10) || 3));
   const photoFile = form.get("photo") as File | null;
 
   if (!fullName || !email || !phone) {

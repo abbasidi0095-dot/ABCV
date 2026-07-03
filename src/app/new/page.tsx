@@ -340,7 +340,7 @@ const NewPageInner = () => {
                   <Select value={String(numExperiences)} onValueChange={(v) => v && setNumExperiences(parseInt(v, 10))}>
                     <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
