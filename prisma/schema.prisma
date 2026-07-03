@@ -15,6 +15,7 @@ model User {
   name           String?
   hashedPassword String? // null for OAuth-only users
   cognitoSub     String?  @unique // Cognito User Pool subject (UUID) for Hosted UI auth
+  isPro          Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

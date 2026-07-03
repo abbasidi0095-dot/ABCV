@@ -50,6 +50,7 @@ export interface RenderArgs {
   roleTitle?: string | null;
   content: CVContent;
   language?: string;
+  isPro?: boolean;
 }
 
 /** Render the template HTML and PDF bytes. */
@@ -90,6 +91,14 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
     uiLabels,
   });
 
+  const watermarkHtml = args.isPro ? '' : `
+    <div style="position: fixed; bottom: 15px; right: 20px; font-family: sans-serif; font-size: 10px; color: #9ca3af; z-index: 9999;">
+      Created with ABCV - The AI CV Generator (abcv.com)
+    </div>
+  `;
+
+  const finalHtml = html.replace('</body>', `${watermarkHtml}</body>`);
+
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
@@ -97,7 +106,7 @@ export async function renderCvPdf(args: RenderArgs): Promise<Buffer> {
   });
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    await page.setContent(finalHtml, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -117,6 +126,7 @@ export interface CoverLetterArgs {
   phone: string;
   roleTitle?: string | null;
   body: string;
+  isPro?: boolean;
 }
 
 export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffer> {
@@ -130,6 +140,17 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
 
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
+  const closingHtml = `
+  <div class="closing">
+    <p>Sincerely,</p>
+    <p><strong>${args.fullName}</strong></p>
+  </div>`;
+
+  const watermarkHtml = args.isPro ? '' : `
+  <div style="position: fixed; bottom: 15px; right: 20px; font-family: sans-serif; font-size: 10px; color: #9ca3af; z-index: 9999;">
+    Created with ABCV - The AI CV Generator (abcv.com)
+  </div>`;
+
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -137,7 +158,7 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
 <style>
   @page { margin: 22mm 25mm; size: A4; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Georgia, "Times New Roman", serif; color: #1f2937; font-size: 11pt; line-height: 1.6; }
+  body { font-family: Georgia, "Times New Roman", serif; color: #1f2937; font-size: 11pt; line-height: 1.6; position: relative; }
   .header { margin-bottom: 28px; }
   .header h1 { font-size: 18pt; font-weight: 700; color: #111827; }
   .contact { font-size: 10pt; color: #6b7280; margin-top: 2px; }
@@ -157,10 +178,8 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
   <div class="body">
     ${args.body.split("\n\n").map((p) => `<p>${p.trim()}</p>`).join("\n    ")}
   </div>
-  <div class="closing">
-    <p>Sincerely,</p>
-    <p><strong>${args.fullName}</strong></p>
-  </div>
+  ${closingHtml}
+  ${watermarkHtml}
 </body>
 </html>`;
 
@@ -171,7 +190,7 @@ export async function renderCoverLetterPdf(args: CoverLetterArgs): Promise<Buffe
   });
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    await page.setContent(html, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,

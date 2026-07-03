@@ -103,6 +103,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       phone: cv.phone,
       roleTitle,
       body: cv.coverLetterText,
+      isPro: user.isPro,
     });
     const safeName = cv.fullName.replace(/[^a-z0-9]+/gi, "_");
     return new NextResponse(new Uint8Array(pdf), {
