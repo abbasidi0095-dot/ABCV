@@ -95,6 +95,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     content = cv.contentJson as CVContent;
   }
 
+  if (!roleTitle && content.targetRole) {
+    roleTitle = content.targetRole;
+  }
+
   let pdf: Buffer;
   try {
     pdf = await renderCvPdf({
@@ -108,6 +112,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       roleTitle,
       content,
       language: cv.language || "en",
+      isPro: user.isPro,
     });
   } catch (e) {
     return NextResponse.json({ error: "render_failed", detail: (e as Error).message }, { status: 500 });

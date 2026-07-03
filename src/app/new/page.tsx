@@ -130,12 +130,18 @@ const NewPageInner = () => {
   };
 
   const analyzeJob = async () => {
+    if (jobMode === "text") {
+      setJobId(null);
+      setParsedJob(null);
+      goStep("details");
+      return;
+    }
     setBusy(true);
     try {
       const r = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(jobMode === "url" ? { sourceUrl: jobUrl } : { pastedText: jobText }),
+        body: JSON.stringify({ sourceUrl: jobUrl }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail ?? d.error ?? "Failed");
@@ -273,7 +279,7 @@ const NewPageInner = () => {
             <div className="mt-5 flex items-center justify-between gap-2">
               <Button asChild variant="ghost"><Link href="/dashboard"><ArrowLeft className="size-4" />{t("new.job.cancel")}</Link></Button>
               <Button onClick={analyzeJob} disabled={busy || (jobMode === "url" ? !jobUrl : jobText.length < 50)}>
-                {busy ? <><Loader2 className="size-4 animate-spin" />{t("new.job.analyzing")}</> : <>{t("new.job.analyze")}<ArrowRight className="size-4" /></>}
+                {busy ? <><Loader2 className="size-4 animate-spin" />{t("new.job.analyzing")}</> : <>{jobMode === "text" ? "Continue" : t("new.job.analyze")}<ArrowRight className="size-4" /></>}
               </Button>
             </div>
           </Card>
