@@ -70,7 +70,7 @@ function nextKey(): string | null {
 
 export function isLlmConfigured(): boolean {
   if (IS_VERTEX) {
-    return Boolean(process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    return Boolean(process.env.GOOGLE_CLOUD_PROJECT && (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.VERTEX_CREDENTIALS_JSON));
   }
   return geminiKeys.length > 0;
 }
@@ -79,7 +79,14 @@ export function isLlmConfigured(): boolean {
 let vertexAuth: GoogleAuth | null = null;
 async function getVertexToken(): Promise<string> {
   if (!vertexAuth) {
-    vertexAuth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] });
+    if (process.env.VERTEX_CREDENTIALS_JSON) {
+      vertexAuth = new GoogleAuth({ 
+        credentials: JSON.parse(process.env.VERTEX_CREDENTIALS_JSON),
+        scopes: ["https://www.googleapis.com/auth/cloud-platform"] 
+      });
+    } else {
+      vertexAuth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] });
+    }
   }
   const client = await vertexAuth.getClient();
   const res = await client.getAccessToken();

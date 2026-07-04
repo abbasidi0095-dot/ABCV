@@ -58,11 +58,10 @@ export default function Home() {
 
         // Hero entrance timeline
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-        tl.from(".hero-badge", { y: 12, opacity: 0, duration: 0.4 })
-          .from(".hero-word", { y: 30, opacity: 0, duration: 0.5, stagger: 0.04 }, "-=0.2")
-          .from(".hero-sub", { y: 20, opacity: 0, duration: 0.4 }, "-=0.3")
-          .from(".hero-cta", { y: 16, opacity: 0, duration: 0.35, stagger: 0.08 }, "-=0.25")
-          .from(".hero-badge-row > *", { y: 10, opacity: 0, duration: 0.3, stagger: 0.05 }, "-=0.2");
+        tl.from(".hero-word", { y: 20, opacity: 0, duration: 0.8, stagger: 0.03, ease: "power3.out" })
+          .from(".hero-sub", { y: 15, opacity: 0, duration: 0.6, ease: "power2.out" }, "-=0.5")
+          .from(".hero-cta", { y: 10, opacity: 0, duration: 0.5, stagger: 0.08, ease: "power2.out" }, "-=0.4")
+          .from(".hero-badge-row > *", { y: 5, opacity: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" }, "-=0.3");
 
         // Parallax blobs
         gsap.to(".blob-a", { yPercent: -30, scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
@@ -71,7 +70,7 @@ export default function Home() {
         // Scroll-reveal cards (batch)
         ScrollTrigger.batch(".reveal-card", {
           start: "top 85%",
-          onEnter: (els) => gsap.fromTo(els, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: "power2.out" }),
+          onEnter: (els) => gsap.fromTo(els, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: "power3.out" }),
           once: true,
         });
 
@@ -101,11 +100,7 @@ export default function Home() {
           <div className="blob-a absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-primary/8 blur-[120px] sm:h-[700px] sm:w-[700px]" />
           <div className="blob-b absolute -bottom-40 right-0 h-[350px] w-[350px] rounded-full bg-accent/8 blur-[100px] sm:h-[500px] sm:w-[500px]" />
         </div>
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="hero-badge mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            {t("home.hero.badge")}
-          </div>
+        <div className="mx-auto max-w-5xl text-left">
           <h1
             className="text-balance font-bold tracking-tight"
             style={{ fontSize: "clamp(2.25rem, 7vw, 4rem)", lineHeight: 1.1 }}
@@ -189,10 +184,10 @@ export default function Home() {
             {steps.map((s) => (
               <div
                 key={s.n}
-                className="reveal-card group relative rounded-2xl border border-border/50 bg-card/40 p-6 transition-colors duration-200 hover:border-primary/30"
+                className="reveal-card group relative flex flex-col items-center text-center p-6"
               >
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="mb-6 flex flex-col items-center gap-4">
+                  <div className="flex size-14 items-center justify-center rounded-full bg-primary/5 text-primary ring-1 ring-primary/10">
                     <s.icon className="size-5" />
                   </div>
                   <span className="font-bold text-muted-foreground/40">{s.n}</span>
@@ -215,13 +210,13 @@ export default function Home() {
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">{t("home.features.subtitle")}</p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 lg:gap-x-24">
             {features.map((f) => (
               <div
                 key={f.title}
-                className="reveal-card group rounded-2xl border border-border/50 bg-card/40 p-6 transition-colors duration-200 hover:border-primary/30"
+                className="reveal-card group relative"
               >
-                <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="mb-5 flex size-12 items-center justify-center rounded-full bg-primary/5 text-primary ring-1 ring-primary/10">
                   <f.icon className="size-5" />
                 </div>
                 <h3 className="mb-2 text-base font-semibold">{f.title}</h3>

@@ -130,10 +130,12 @@ const NewPageInner = () => {
   };
 
   const analyzeJob = async () => {
-    if (jobMode === "text") {
-      setJobId(null);
-      setParsedJob(null);
-      goStep("details");
+    if (jobMode === "text" && !jobText.trim()) {
+      toast.error("Please paste the job description");
+      return;
+    }
+    if (jobMode === "url" && !jobUrl.trim()) {
+      toast.error("Please paste a job URL");
       return;
     }
     setBusy(true);
@@ -141,14 +143,26 @@ const NewPageInner = () => {
       const r = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceUrl: jobUrl }),
+        body: JSON.stringify(jobMode === "url" ? { sourceUrl: jobUrl } : { pastedText: jobText }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail ?? d.error ?? "Failed");
-      setJobId(d.job.id); setParsedJob(d.job.parsedJson as ParsedJob);
-      goStep("details"); toast.success(t("new.toast.analyzed"));
-    } catch (e) { toast.error("Analyze failed", { description: (e as Error).message }); }
-    finally { setBusy(false); }
+      
+      // Validate parsedJob data before proceeding
+      const parsedData = d.job?.parsedJson;
+      if (!parsedData || !parsedData.jobTitle) {
+        throw new Error("Job parsing returned incomplete data. Please try again with a clearer job description.");
+      }
+      
+      setJobId(d.job.id); 
+      setParsedJob(parsedData as ParsedJob);
+      goStep("details"); 
+      toast.success(t("new.toast.analyzed"));
+    } catch (e) { 
+      toast.error("Analyze failed", { description: (e as Error).message }); 
+    } finally { 
+      setBusy(false); 
+    }
   };
 
   const generateCv = async () => {
@@ -157,7 +171,7 @@ const NewPageInner = () => {
     try {
       const fd = new FormData();
       if (jobId) fd.set("jobId", jobId);
-      if (jobText && !jobId) fd.set("pastedText", jobText);
+      if (jobMode === "text" && jobText && !jobId) fd.set("pastedText", jobText);
       fd.set("fullName", fullName); fd.set("email", emailDetail); fd.set("phone", phone);
       fd.set("language", language); fd.set("numExperiences", String(numExperiences));
       if (photo) fd.set("photo", photo);
@@ -207,7 +221,11 @@ const NewPageInner = () => {
       if (!r.ok) throw new Error("Render failed");
       const blob = await r.blob(); const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_CV.pdf`; a.click(); URL.revokeObjectURL(url);
+      a.download = `${fullName.replace(/\s+/g, "_")}_CV.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (e) { toast.error("Download failed", { description: (e as Error).message }); }
   };
 
@@ -242,7 +260,11 @@ const NewPageInner = () => {
       if (!r.ok) throw new Error("Download failed");
       const blob = await r.blob(); const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_Cover_Letter.pdf`; a.click(); URL.revokeObjectURL(url);
+      a.download = `${fullName.replace(/\s+/g, "_")}_Cover_Letter.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (e) { toast.error("Download failed", { description: (e as Error).message }); }
   };
 
@@ -285,8 +307,9 @@ const NewPageInner = () => {
           </Card>
         )}
 
-        {step === "details" && parsedJob && (
+        {step === "details" && (
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {parsedJob ? (<>
             <Card className="p-5">
               <h2 className="text-lg font-semibold">Role summary</h2>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -311,7 +334,22 @@ const NewPageInner = () => {
               <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={() => goStep("job")}><ArrowLeft className="size-4" />{t("new.role.edit")}</Button>
               </div>
-            </Card>
+            </Card></>) : (
+              <Card className="p-5 border-destructive">
+                <div className="flex items-start gap-3">
+                  <div className="grid size-8 place-items-center rounded-full bg-destructive/10 text-destructive">!</div>
+                  <div>
+                    <h3 className="font-semibold text-destructive">Failed to parse job details</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      We couldn't extract the job information. Please go back and try again with a clearer job description or URL.
+                    </p>
+                    <div className="mt-3">
+                      <Button variant="outline" size="sm" onClick={() => goStep("job")}><ArrowLeft className="size-4" />Back to job input</Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <Card className="p-5">
               <h2 className="text-lg font-semibold">{t("new.details.title")}</h2>

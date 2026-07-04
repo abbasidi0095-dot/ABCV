@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${jakarta.variable} antialiased`} suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
+      <body className="min-h-screen flex flex-col bg-background text-foreground font-sans overflow-x-hidden">
         <Providers>
           <SiteHeader />
           <main className="flex-1">{children}</main>

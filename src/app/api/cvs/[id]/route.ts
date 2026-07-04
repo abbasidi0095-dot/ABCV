@@ -115,6 +115,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       isPro: user.isPro,
     });
   } catch (e) {
+    console.error("PDF Render Exception:", e);
     return NextResponse.json({ error: "render_failed", detail: (e as Error).message }, { status: 500 });
   }
 

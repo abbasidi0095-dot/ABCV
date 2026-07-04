@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "6mb",
     },
   },
+
+  allowedDevOrigins: [
+    "*.trycloudflare.com",
+    "statutes-him-universal-mode.trycloudflare.com",
+    "localhost"
+  ],
 };
 
 export default nextConfig;

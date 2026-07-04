@@ -70,9 +70,9 @@ export default function DashboardPage() {
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t("dashboard.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
-        <Button asChild className="shrink-0">
-          <Link href="/new" prefetch={false}>
-            <Plus className="size-4" />{t("dashboard.new")}
+        <Button asChild size="icon" className="shrink-0 rounded-full">
+          <Link href="/new" prefetch={false} aria-label={t("dashboard.new")}>
+            <Plus className="size-5" />
           </Link>
         </Button>
       </div>

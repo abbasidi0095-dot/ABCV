@@ -12,12 +12,12 @@ import {
 
 async function resolveCognitoUser(): Promise<CognitoUser | null> {
   const idToken = await readIdToken();
-  if (!idToken) return null;
+  if (!idToken) { console.error("No ID token found in cookies"); return null; }
 
-  // Fast path: the current ID token is still valid.
   try {
     return await verifyIdToken(idToken);
-  } catch {
+  } catch (e) {
+    console.error("verifyIdToken failed for current idToken:", e);
     // Expired/invalid — try a silent refresh.
     const refreshToken = await readRefreshToken();
     if (!refreshToken) return null;
@@ -77,13 +77,13 @@ async function getSessionUser(): Promise<CognitoUser | null> {
 
 export async function getCurrentUser() {
   const session = await getSessionUser();
-  if (!session) return null;
+  if (!session) { console.error("getSessionUser returned null"); return null; }
 
   try {
     const { user } = await ensureLocalUser(session);
     return user;
-  } catch {
-    // DB unavailable — auth is valid but we can't back it with a User row.
+  } catch (e) {
+    console.error("ensureLocalUser failed:", e);
     return null;
   }
 }
